@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="same-origin">
+<meta name="description" content="Contador de tiempo para ponencias y exposiciones de la Gobernación de Nariño.">
+<meta name="theme-color" content="#003366">
+<title>Contador de exposiciones · Gobernación de Nariño</title>
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="assets/fonts/hind-madurai-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/app.css?v=1.0.0">
+<script src="assets/js/app.js?v=1.0.0" defer></script>
+</head>
+<body>
+
+<div id="app" class="app">
+  <img id="bg-img" class="bg-img" alt="" hidden>
+  <div id="fx-base" class="fx-layer" aria-hidden="true"></div>
+  <div id="fx-band" class="fx-layer fx-band" aria-hidden="true"></div>
+
+  <header class="top">
+    <img id="logo" class="logo" alt="Logo de la entidad" hidden>
+    <div id="logo-ph" class="logo-ph" aria-hidden="true">[LOGO DE LA ENTIDAD]</div>
+    <div class="titles">
+      <h1 id="title" class="title" data-fx data-color="title">[Nombre del evento]</h1>
+      <p id="subtitle" class="subtitle" data-fx data-color="subtitle">[Lugar · fecha]</p>
+    </div>
+    <span id="status" class="status">En pausa</span>
+    <button type="button" id="menu-btn" class="icon-btn" aria-label="Abrir configuración" aria-haspopup="dialog" aria-expanded="false">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg>
+    </button>
+  </header>
+
+  <main class="stage">
+    <div id="counter" class="counter">
+      <canvas id="canvas" aria-hidden="true"></canvas>
+      <div id="fallback" class="fallback" aria-hidden="true" hidden>05:00</div>
+      <p id="timer" class="sr-only" role="timer" aria-atomic="true">Tiempo restante: 5 minutos 0 segundos</p>
+    </div>
+
+    <div class="speaker">
+      <p class="turn-label" data-fx data-color="label">Ponente en turno · <span id="turn-label">1 de 3</span></p>
+      <h2 id="speaker-name" class="speaker-name" data-fx data-color="speaker">[Nombre del ponente 1]</h2>
+      <p id="speaker-prof" class="speaker-prof" data-fx data-color="profession">[Profesión]</p>
+    </div>
+  </main>
+
+  <footer class="bottom">
+    <div class="controls">
+      <button type="button" id="toggle-btn" class="btn btn-primary">
+        <svg id="icon-pause" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true" focusable="false" hidden><path d="M8 5v14"/><path d="M16 5v14"/></svg>
+        <svg id="icon-play" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 4.5v15l12-7.5z"/></svg>
+        <span id="toggle-label">Iniciar</span>
+      </button>
+      <button type="button" id="reset-btn" class="btn btn-secondary">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/></svg>
+        Reiniciar
+      </button>
+    </div>
+
+    <div class="foot-text">
+      <p id="footer-text" class="footer-text" data-fx data-color="text">[Texto inferior]</p>
+      <p id="next-label" class="next-label" data-fx data-color="text">Siguiente: [Nombre del ponente 2] · [Profesión]</p>
+    </div>
+
+    <button type="button" id="next-btn" class="next-btn" aria-label="Pasar al siguiente turno">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+    </button>
+  </footer>
+
+  <div class="progress" aria-hidden="true"><div id="progress-bar" class="progress-bar"></div></div>
+
+  <div id="announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+  <div id="alerter" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
+</div>
+
+<div id="overlay" class="overlay" hidden>
+  <section id="settings" class="panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="panel-head">
+      <h2 id="settings-title">Configuración</h2>
+      <button type="button" id="close-btn" class="close-btn" aria-label="Cerrar configuración">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>
+      </button>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="Secciones de configuración">
+      <button type="button" role="tab" id="tab-general" aria-controls="panel-general" aria-selected="true">General</button>
+      <button type="button" role="tab" id="tab-turns" aria-controls="panel-turns" aria-selected="false" tabindex="-1">Turnos</button>
+      <button type="button" role="tab" id="tab-colors" aria-controls="panel-colors" aria-selected="false" tabindex="-1">Colores</button>
+      <button type="button" role="tab" id="tab-sound" aria-controls="panel-sound" aria-selected="false" tabindex="-1">Sonido</button>
+      <button type="button" role="tab" id="tab-access" aria-controls="panel-access" aria-selected="false" tabindex="-1">Acceso</button>
+    </div>
+
+    <div class="panel-body">
+
+      <!-- General -->
+      <div role="tabpanel" id="panel-general" aria-labelledby="tab-general" class="stack">
+        <h3>Tiempo</h3>
+        <div class="grid-3">
+          <div class="field">
+            <label for="f-min">Minutos por turno</label>
+            <input id="f-min" class="input" type="number" inputmode="numeric" min="1" max="180" data-cfg="minutes" data-num="1,180" aria-describedby="f-min-hint">
+            <span id="f-min-hint" class="hint">1 a 180</span>
+          </div>
+          <div class="field">
+            <label for="f-yel">Amarillo desde (s)</label>
+            <input id="f-yel" class="input" type="number" inputmode="numeric" min="10" max="10800" data-cfg="yellowAt" data-num="10,10800" aria-describedby="f-yel-hint">
+            <span id="f-yel-hint" class="hint">Segundos restantes</span>
+          </div>
+          <div class="field">
+            <label for="f-red">Rojo desde (s)</label>
+            <input id="f-red" class="input" type="number" inputmode="numeric" min="5" max="10800" data-cfg="redAt" data-num="5,10800" aria-describedby="f-red-hint">
+            <span id="f-red-hint" class="hint">Segundos restantes</span>
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-fx">Efecto de la franja</label>
+          <select id="f-fx" class="input" data-cfg="fxTarget">
+            <option value="text">En los números</option>
+            <option value="bg">En el fondo (el texto cambia de color al pasar la franja)</option>
+          </select>
+        </div>
+        <label class="check">
+          <input type="checkbox" data-cfg="outline" data-bool>
+          Contorno automático en los números cuando el contraste con el fondo es bajo
+        </label>
+        <button type="button" id="apply-minutes" class="btn-outline-green">Aplicar a todos los turnos</button>
+
+        <h3>Fondo</h3>
+        <div class="row-between">
+          <label for="f-bgc">Color de fondo</label>
+          <div class="color-pick">
+            <span class="mono" data-color-value="bg"></span>
+            <input id="f-bgc" type="color" data-color-input="bg">
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-bgi">Imagen de fondo (opcional, va sobre el color)</label>
+          <input id="f-bgi" class="file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-upload="bgImage" aria-describedby="f-bgi-hint">
+          <span id="f-bgi-hint" class="hint" data-upload-hint></span>
+        </div>
+        <div id="bg-options" class="stack-sm" hidden>
+          <div class="grid-2">
+            <div class="field">
+              <label for="f-bgfit">Ajuste</label>
+              <select id="f-bgfit" class="input" data-cfg="bgFit">
+                <option value="cover">Cubrir pantalla</option>
+                <option value="contain">Imagen completa</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="f-bgo">Opacidad: <span id="f-bgo-val">100</span>%</label>
+              <input id="f-bgo" class="range" type="range" min="5" max="100" step="5" data-cfg="bgOpacity" data-num="5,100">
+            </div>
+          </div>
+          <button type="button" id="clear-bg" class="btn-plain">Quitar imagen de fondo</button>
+        </div>
+
+        <h3>Logo</h3>
+        <div class="field">
+          <label for="f-logo">Imagen del logo (PNG, JPG, WEBP o SVG)</label>
+          <input id="f-logo" class="file" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" data-upload="logo" aria-describedby="f-logo-hint">
+          <span id="f-logo-hint" class="hint" data-upload-hint></span>
+        </div>
+        <button type="button" id="clear-logo" class="btn-plain" hidden>Quitar logo</button>
+
+        <h3>Títulos y texto</h3>
+        <div class="field">
+          <label for="f-title">Título del evento</label>
+          <input id="f-title" class="input" type="text" maxlength="160" data-cfg="title">
+        </div>
+        <div class="field">
+          <label for="f-sub">Subtítulo</label>
+          <input id="f-sub" class="input" type="text" maxlength="160" data-cfg="subtitle">
+        </div>
+        <div class="field">
+          <label for="f-foot">Texto inferior</label>
+          <input id="f-foot" class="input" type="text" maxlength="160" data-cfg="footer">
+        </div>
+      </div>
+
+      <!-- Turnos -->
+      <div role="tabpanel" id="panel-turns" aria-labelledby="tab-turns" class="stack" hidden>
+        <h3>Orden de los turnos</h3>
+        <ol id="turn-list" class="turn-list"></ol>
+        <button type="button" id="add-turn" class="btn-green">+ Agregar turno</button>
+      </div>
+
+      <!-- Colores -->
+      <div role="tabpanel" id="panel-colors" aria-labelledby="tab-colors" class="stack" hidden>
+        <h3>Colores de la interfaz</h3>
+        <p class="note">Se indica el contraste de cada color con su fondo según WCAG 2.1 AA.</p>
+        <ul id="color-list" class="color-list"></ul>
+        <button type="button" id="reset-colors" class="btn-plain">Restablecer colores institucionales</button>
+      </div>
+
+      <!-- Sonido -->
+      <div role="tabpanel" id="panel-sound" aria-labelledby="tab-sound" class="stack" hidden>
+        <h3>Sonido y voz</h3>
+        <label class="check">
+          <input type="checkbox" data-cfg="sound" data-bool>
+          Alerta sonora a 1 minuto y al terminar
+        </label>
+        <label class="check">
+          <input type="checkbox" data-cfg="voice" data-bool>
+          Anuncios por voz
+        </label>
+        <h3 class="h3-sm">ElevenLabs</h3>
+        <div class="field">
+          <label for="f-key">API key</label>
+          <input id="f-key" class="input" type="password" autocomplete="off" spellcheck="false" aria-describedby="f-key-hint">
+          <span id="f-key-hint" class="hint"></span>
+        </div>
+        <button type="button" id="clear-key" class="btn-plain" hidden>Borrar API key guardada</button>
+        <div class="field">
+          <label for="f-voice">ID de voz</label>
+          <input id="f-voice" class="input" type="text" maxlength="64" spellcheck="false" placeholder="voice_id" data-cfg="elVoice">
+        </div>
+        <div class="field">
+          <label for="f-model">Modelo</label>
+          <input id="f-model" class="input" type="text" maxlength="64" spellcheck="false" data-cfg="elModel">
+        </div>
+        <div class="field">
+          <label for="f-end">Frase al terminar el tiempo</label>
+          <input id="f-end" class="input" type="text" maxlength="200" data-cfg="endPhrase">
+        </div>
+        <div class="field">
+          <label for="f-start">Frase al iniciar turno (antes del nombre)</label>
+          <input id="f-start" class="input" type="text" maxlength="200" data-cfg="startPhrase">
+        </div>
+        <p id="voice-status" class="note"></p>
+        <div class="grid-2">
+          <button type="button" id="test-end" class="btn-blue">Probar fin de turno</button>
+          <button type="button" id="test-start" class="btn-outline-blue">Probar inicio</button>
+        </div>
+      </div>
+
+      <!-- Acceso -->
+      <div role="tabpanel" id="panel-access" aria-labelledby="tab-access" class="stack" hidden>
+        <h3>Acceso de administrador</h3>
+        <p id="access-intro" class="note"></p>
+
+        <form id="login-form" class="stack-sm" hidden novalidate>
+          <div class="field">
+            <label for="f-pass">Contraseña</label>
+            <input id="f-pass" class="input" type="password" autocomplete="current-password" required>
+          </div>
+          <button type="submit" class="btn-blue">Iniciar sesión</button>
+        </form>
+
+        <form id="setup-form" class="stack-sm" hidden novalidate>
+          <div class="field">
+            <label for="f-token">Token de configuración (config.php)</label>
+            <input id="f-token" class="input" type="password" autocomplete="off" required>
+          </div>
+          <div class="field">
+            <label for="f-newpass">Nueva contraseña</label>
+            <input id="f-newpass" class="input" type="password" autocomplete="new-password" minlength="12" required aria-describedby="f-newpass-hint">
+            <span id="f-newpass-hint" class="hint">Mínimo 12 caracteres.</span>
+          </div>
+          <div class="field">
+            <label for="f-newpass2">Repetir contraseña</label>
+            <input id="f-newpass2" class="input" type="password" autocomplete="new-password" minlength="12" required>
+          </div>
+          <button type="submit" class="btn-blue">Crear contraseña</button>
+        </form>
+
+        <div id="logged-box" class="stack-sm" hidden>
+          <button type="button" id="logout-btn" class="btn-plain">Cerrar sesión</button>
+        </div>
+
+        <p id="access-msg" class="form-msg" role="alert"></p>
+      </div>
+    </div>
+
+    <div class="panel-foot">
+      <p id="save-status" class="save-status" role="status"></p>
+      <button type="button" id="save-btn" class="btn-green">Guardar cambios</button>
+    </div>
+  </section>
+</div>
+
+<noscript><p class="noscript">El contador necesita JavaScript activado.</p></noscript>
+</body>
+</html>

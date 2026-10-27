@@ -1,0 +1,158 @@
+{
+  ".claude/settings.json": {
+    "mtime": 1793133496.145129,
+    "seen": 1793134830.8142884,
+    "ast_hash": "d5b9c2b5460e861bd123924cd9768f6e",
+    "semantic_hash": ""
+  },
+  "bin/set-password.php": {
+    "mtime": 1793133794.9790988,
+    "seen": 1793134830.8143055,
+    "ast_hash": "3e9c25b3cec700a3ad50cbda413d976d",
+    "semantic_hash": ""
+  },
+  "config/config.example.php": {
+    "mtime": 1793133658.2951002,
+    "seen": 1793134830.814312,
+    "ast_hash": "fb3b5464cb3fe36e0bb3ab540bfd720f",
+    "semantic_hash": ""
+  },
+  "package.json": {
+    "mtime": 1793134627.5837383,
+    "seen": 1793134830.8143158,
+    "ast_hash": "8481b03a87fadabe7654c1138f3bea71",
+    "semantic_hash": ""
+  },
+  "public/api.php": {
+    "mtime": 1793133770.199099,
+    "seen": 1793134830.81432,
+    "ast_hash": "669c3825a5dbadcede6ed04511be3233",
+    "semantic_hash": ""
+  },
+  "public/assets/js/app.js": {
+    "mtime": 1793134847.1844072,
+    "seen": 1793134890.6618896,
+    "ast_hash": "54af21d611350a1bb5bb3f7cfef97a6a",
+    "semantic_hash": ""
+  },
+  "src/bootstrap.php": {
+    "mtime": 1793133787.119099,
+    "seen": 1793134830.8143277,
+    "ast_hash": "29b37fb59182f9ae2cee10bbfa4a40c0",
+    "semantic_hash": ""
+  },
+  "src/validate.php": {
+    "mtime": 1793133866.1287572,
+    "seen": 1793134830.814331,
+    "ast_hash": "e8cafb717f77d88138b7356088d2c178",
+    "semantic_hash": ""
+  },
+  "tests/a11y.test.mjs": {
+    "mtime": 1793134499.2618132,
+    "seen": 1793134830.8143346,
+    "ast_hash": "b375e0613f1065fab79e0b474d3cffc8",
+    "semantic_hash": ""
+  },
+  "tests/helpers.mjs": {
+    "mtime": 1793134315.0470936,
+    "seen": 1793134830.8143382,
+    "ast_hash": "c265dfc0c19962396a968609bce989b6",
+    "semantic_hash": ""
+  },
+  "tests/lint.mjs": {
+    "mtime": 1793134292.7712855,
+    "seen": 1793134830.8143413,
+    "ast_hash": "c68e8801ac4fd40d1bc9634d3f60d6d2",
+    "semantic_hash": ""
+  },
+  "tests/security.test.mjs": {
+    "mtime": 1793134368.595093,
+    "seen": 1793134830.814345,
+    "ast_hash": "c3b071d04c66db4db7cff5a2e8fffec7",
+    "semantic_hash": ""
+  },
+  "tests/static.test.mjs": {
+    "mtime": 1793134395.6470928,
+    "seen": 1793134830.8143482,
+    "ast_hash": "3b22acc7890d2ab53da40a5cdd00003f",
+    "semantic_hash": ""
+  },
+  "CLAUDE.md": {
+    "mtime": 1793134817.5510886,
+    "seen": 1793134830.8143513,
+    "ast_hash": "70c620558631fe8e3913223e2f43cc38",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1793134807.7590885,
+    "seen": 1793134830.8143542,
+    "ast_hash": "ffea6b45c1a11fec6f93f1cc09073871",
+    "semantic_hash": ""
+  },
+  "design/Main.dc.html": {
+    "mtime": 1793134577.379091,
+    "seen": 1793134830.814357,
+    "ast_hash": "4001da1a30c7a306c895b5f7e22ff884",
+    "semantic_hash": ""
+  },
+  "design/README-export.md": {
+    "mtime": 1793134577.3868582,
+    "seen": 1793134830.8143606,
+    "ast_hash": "ee79b2ed362f95c8f19974b2d74b0f01",
+    "semantic_hash": ""
+  },
+  "docs/DESPLIEGUE-PLESK.md": {
+    "mtime": 1793134613.3390906,
+    "seen": 1793134830.8143637,
+    "ast_hash": "defb6b7bfafaf5e4c5044dac55a22c01",
+    "semantic_hash": ""
+  },
+  "docs/INFORME-SEGURIDAD-ACCESIBILIDAD.md": {
+    "mtime": 1793134790.8270888,
+    "seen": 1793134830.8143666,
+    "ast_hash": "0a43017a559296968bf5b9b231c096b6",
+    "semantic_hash": ""
+  },
+  "public/assets/fonts/OFL-HindMadurai.txt": {
+    "mtime": 1793133612.7418466,
+    "seen": 1793134830.8143697,
+    "ast_hash": "8bc7d0ff476880f08cfa119ec753bb3f",
+    "semantic_hash": ""
+  },
+  "public/assets/fonts/OFL-NunitoSans.txt": {
+    "mtime": 1793133612.9212286,
+    "seen": 1793134830.8143728,
+    "ast_hash": "23d4d0303ede3add187dce33e45e74ba",
+    "semantic_hash": ""
+  },
+  "public/index.html": {
+    "mtime": 1793134528.051951,
+    "seen": 1793134830.8143756,
+    "ast_hash": "57e09ecba02d6538fca2d3ae0fe4f64f",
+    "semantic_hash": ""
+  },
+  "storage/README.md": {
+    "mtime": 1793134189.075095,
+    "seen": 1793134830.814381,
+    "ast_hash": "0d3f4530ed14d67ed890c30318fe4efc",
+    "semantic_hash": ""
+  },
+  "tests/reports/axe-resultados.md": {
+    "mtime": 1793134876.6430879,
+    "seen": 1793134890.6619735,
+    "ast_hash": "0fb471184560e2ba7d675db30311275a",
+    "semantic_hash": ""
+  },
+  "public/assets/img/favicon.svg": {
+    "mtime": 1793134172.8337593,
+    "seen": 1793134830.8143878,
+    "ast_hash": "b820651c490fd3ddf5b2bc0b8da27c7a",
+    "semantic_hash": ""
+  },
+  "package-lock.json": {
+    "mtime": 1793134293.5390937,
+    "seen": 1793134830.8143911,
+    "ast_hash": "6f5bfde6ad1e57a34db51059a0a36cc7",
+    "semantic_hash": ""
+  }
+}

@@ -1,0 +1,716 @@
+<!doctype html>
+<meta charset="utf-8"><style data-dc-design-system-vars>@layer{:root{--brand-green:#10a13b;--brand-yellow:#ffd500;--brand-blue-dark:#003366;--ink:#000000;--body-text:#4a4a4a;--surface:#ffffff;--surface-alt:#f4f6f5;--on-brand-text:#ffffff;--space-1:4px;--space-2:8px;--space-3:16px;--space-4:24px;--space-5:32px;--space-6:48px;--radius-sm:4px;--radius-md:8px;--radius-lg:16px;--radius-full:9999px;--font-display:"Hind Madurai", system-ui, sans-serif;--font-body-web:"Nunito Sans", system-ui, sans-serif;--font-body-doc:"Hind Madurai", system-ui, sans-serif;--font-emphasis:"Source Sans 3", system-ui, sans-serif;--text-h1:700 40px/48px var(--font-display);--text-h2:600 28px/34px var(--font-display);--text-h3:600 22px/28px var(--font-display);--text-body:400 16px/22px var(--font-body-web);--text-body-strong:700 16px/22px var(--font-body-web);--text-label:600 13px/18px var(--font-body-web);--text-doc-body:400 11px/13px var(--font-body-doc);--text-doc-heading:600 28px/30px var(--font-body-doc);--text-emphasis-italic:400 16px/22px var(--font-emphasis);}}</style>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Contador de exposiciones</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+<script src="./assets/b3671c0781c614657bb722131a0f986e.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Madurai:wght@400;600;700&amp;family=Nunito+Sans:wght@400;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#003366}a:hover{color:#10A13B}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.cfg-input{height:44px;box-sizing:border-box;border:1px solid #B8C0BC;border-radius:8px;padding:0 12px;font:400 16px "Nunito Sans",system-ui,sans-serif;color:#000;background:#FFF;width:100%}
+.cfg-input:focus{outline:3px solid #FFD500;outline-offset:1px;border-color:#003366}
+button:focus-visible{outline:3px solid #FFD500;outline-offset:2px}
+input[type=color]{width:56px;height:44px;padding:2px;border:1px solid #B8C0BC;border-radius:8px;background:#FFF;cursor:pointer}
+</style>
+</helmet>
+<div ref="{{setRoot}}" style="position: relative; width: 100%; height: 100vh; min-height: 560px; overflow: hidden; display: flex; flex-direction: column; background: {{c.bg}}; font-family: 'Nunito Sans', system-ui, sans-serif; color: #4A4A4A">
+
+  <sc-if value="{{hasBgImage}}" hint-placeholder-val="{{ false }}">
+    <img src="{{cfg.bgImage}}" alt="" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: {{cfg.bgFit}}; opacity: {{bgOpacity}}; z-index: 0; pointer-events: none">
+  </sc-if>
+  <div ref="{{setBase}}" aria-hidden="true" style="position: absolute; inset: 0; z-index: 0; pointer-events: none; background: transparent"></div>
+  <div ref="{{setBand}}" aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; height: 0%; z-index: 0; pointer-events: none"></div>
+
+  <header style="position: relative; z-index: 1; display: flex; align-items: center; gap: 24px; padding: 24px 48px; flex-wrap: wrap">
+    <sc-if value="{{hasLogo}}" hint-placeholder-val="{{ false }}">
+      <img src="{{cfg.logo}}" alt="Logo de la entidad" style="height: 64px; width: auto; max-width: 280px; object-fit: contain">
+    </sc-if>
+    <sc-if value="{{noLogo}}" hint-placeholder-val="{{ true }}">
+      <div style="height: 64px; width: 200px; box-sizing: border-box; border: 2px dashed #B8C0BC; border-radius: 8px; display: flex; align-items: center; justify-content: center; font: 600 13px 'Nunito Sans', sans-serif; color: #4A4A4A">[LOGO DE LA ENTIDAD]</div>
+    </sc-if>
+    <div style="display: flex; flex-direction: column; gap: 4px; flex: 1 1 320px; min-width: 0">
+      <h1 data-fx="1" data-c="{{c.title}}" style="margin: 0; font: 700 clamp(22px, 2.2vw, 34px)/1.2 'Hind Madurai', sans-serif; color: {{c.title}}">{{cfg.title}}</h1>
+      <p data-fx="1" data-c="{{c.subtitle}}" style="margin: 0; font: 400 clamp(15px, 1.2vw, 18px)/1.4 'Nunito Sans', sans-serif; color: {{c.subtitle}}">{{cfg.subtitle}}</p>
+    </div>
+    <span style="font: 600 13px/18px 'Nunito Sans', sans-serif; padding: 6px 12px; border-radius: 4px; background: {{statusBg}}; color: {{statusFg}}">{{statusLabel}}</span>
+    <button type="button" aria-label="Abrir configuración" aria-expanded="{{menuOpenStr}}" onClick="{{openMenu}}" style="width: 52px; height: 52px; border-radius: 9999px; border: 1px solid #D5DBD8; background: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer; color: {{c.header}}">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16"></path><path d="M4 12h16"></path><path d="M4 17h16"></path></svg>
+    </button>
+  </header>
+
+  <main style="position: relative; z-index: 1; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 0 48px">
+    <div style="position: relative; width: min(100%, 1500px); height: clamp(170px, 38vh, 480px)">
+      <canvas ref="{{setCanvas}}" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%; display: block"></canvas>
+      <sc-if value="{{noGL}}" hint-placeholder-val="{{ false }}">
+        <div aria-hidden="true" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font: 700 clamp(120px, 28vh, 380px)/1 'Hind Madurai', sans-serif; font-variant-numeric: tabular-nums; color: {{fallbackColor}}">{{timeText}}</div>
+      </sc-if>
+      <p class="sr-only">Tiempo restante: {{timeText}}</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; max-width: 1100px">
+      <span data-fx="1" data-c="{{c.accent}}" style="font: 600 13px/18px 'Nunito Sans', sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: {{c.accent}}">Ponente en turno · {{turnLabel}}</span>
+      <h2 data-fx="1" data-c="{{c.speaker}}" style="margin: 0; font: 700 clamp(30px, 4vw, 60px)/1.15 'Hind Madurai', sans-serif; color: {{c.speaker}}">{{current.name}}</h2>
+      <p data-fx="1" data-c="{{c.profession}}" style="margin: 0; font: 400 clamp(18px, 2vw, 30px)/1.3 'Nunito Sans', sans-serif; color: {{c.profession}}">{{current.profession}}</p>
+    </div>
+  </main>
+
+  <footer style="position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 20px 48px 28px">
+    <div style="display: flex; gap: 8px; flex-wrap: wrap">
+      <button type="button" onClick="{{toggle}}" style="height: 48px; padding: 0 20px; border-radius: 8px; border: 0; background: {{c.header}}; color: #FFFFFF; font: 700 16px 'Nunito Sans', sans-serif; display: flex; align-items: center; gap: 8px; cursor: pointer">
+        <sc-if value="{{running}}" hint-placeholder-val="{{ false }}">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M8 5v14"></path><path d="M16 5v14"></path></svg>
+        </sc-if>
+        <sc-if value="{{paused}}" hint-placeholder-val="{{ true }}">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"></path></svg>
+        </sc-if>
+        {{toggleLabel}}
+      </button>
+      <button type="button" onClick="{{reset}}" style="height: 48px; padding: 0 18px; border-radius: 8px; border: 1px solid #B8C0BC; background: #FFFFFF; color: #000000; font: 600 16px 'Nunito Sans', sans-serif; display: flex; align-items: center; gap: 8px; cursor: pointer">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7"></path><path d="M4 4v4h4"></path></svg>
+        Reiniciar
+      </button>
+    </div>
+
+    <div style="flex: 1 1 280px; min-width: 0; text-align: center; display: flex; flex-direction: column; gap: 2px">
+      <span data-fx="1" data-c="{{c.text}}" style="font: 600 16px/22px 'Nunito Sans', sans-serif; color: {{c.text}}">{{cfg.footer}}</span>
+      <span data-fx="1" data-c="{{c.text}}" style="font: 400 14px/20px 'Nunito Sans', sans-serif; color: {{c.text}}">{{nextLabel}}</span>
+    </div>
+
+    <button type="button" aria-label="Pasar al siguiente turno" onClick="{{next}}" disabled="{{isLast}}" style="width: 76px; height: 76px; border-radius: 9999px; border: 0; background: {{c.accent}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: {{nextOpacity}}; box-shadow: 0 6px 18px rgba(0,0,0,0.16)">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+    </button>
+  </footer>
+
+  <div aria-hidden="true" style="position: absolute; left: 0; bottom: 0; height: 6px; width: 100%; background: #E6EAE8">
+    <div style="height: 100%; width: {{progressPct}}%; background: {{fallbackColor}}"></div>
+  </div>
+
+  <sc-if value="{{menuOpen}}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.38); display: flex; justify-content: flex-end; z-index: 10">
+      <section role="dialog" aria-modal="true" aria-label="Configuración del contador" style="width: min(460px, 100%); height: 100%; box-sizing: border-box; background: #FFFFFF; display: flex; flex-direction: column; box-shadow: -8px 0 32px rgba(0,0,0,0.2)">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; background: #003366; color: #FFFFFF">
+          <h2 style="margin: 0; font: 600 22px/28px 'Hind Madurai', sans-serif">Configuración</h2>
+          <button type="button" aria-label="Cerrar configuración" onClick="{{closeMenu}}" style="width: 44px; height: 44px; border-radius: 9999px; border: 0; background: rgba(255,255,255,0.14); color: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg>
+          </button>
+        </div>
+
+        <div role="tablist" aria-label="Secciones de configuración" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid #D5DBD8">
+          <sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
+            <button type="button" role="tab" aria-selected="{{t.sel}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+          </sc-for>
+        </div>
+
+        <div style="flex: 1 1 auto; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 18px">
+
+          <sc-if value="{{tabGeneral}}" hint-placeholder-val="{{ true }}">
+            <div style="display: flex; flex-direction: column; gap: 18px">
+              <h3 style="margin: 0; font: 600 18px/24px 'Hind Madurai', sans-serif; color: #000">Tiempo</h3>
+              <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+                <div style="display: flex; flex-direction: column; gap: 6px">
+                  <label for="f-min" style="font: 600 13px/18px 'Nunito Sans', sans-serif; color: #4A4A4A">Minutos por turno</label>
+                  <input id="f-min" class="cfg-input" type="number" min="1" max="180" value="{{cfg.minutes}}" onChange="{{h.minutes}}">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 6px">
+                  <label for="f-yel" style="font: 600 13px/18px 'Nunito Sans', sans-serif; color: #4A4A4A">Amarillo desde (s)</label>
+                  <input id="f-yel" class="cfg-input" type="number" min="10" value="{{cfg.yellowAt}}" onChange="{{h.yellowAt}}">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 6px">
+                  <label for="f-red" style="font: 600 13px/18px 'Nunito Sans', sans-serif; color: #4A4A4A">Rojo desde (s)</label>
+                  <input id="f-red" class="cfg-input" type="number" min="5" value="{{cfg.redAt}}" onChange="{{h.redAt}}">
+                </div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px">
+                <label for="f-fx" style="font: 600 13px/18px 'Nunito Sans', sans-serif; color: #4A4A4A">Efecto de la franja</label>
+                <select id="f-fx" class="cfg-input" value="{{cfg.fxTarget}}" onChange="{{h.fxTarget}}">
+                  <option value="text">En los números</option>
+                  <option value="bg">En el fondo (el texto cambia de color al pasar la franja)</option>
+                </select>
+              </div>
+              <button type="button" onClick="{{applyMinutes}}" style="height: 44px; border-radius: 8px; border: 1px solid #10A13B; background: #FFFFFF; color: #0B7A2C; font: 700 15px 'Nunito Sans', sans-serif; cursor: pointer">Aplicar a todos los turnos</button>
+
+              <h3 style="margin: 8px 0 0; font: 600 18px/24px 'Hind Madurai', sans-serif; color: #000">Fondo</h3>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+                <label for="f-bgc" style="font: 600 13px/18px 'Nunito Sans', sans-serif; color: #4A4A4A">Color de fondo</label>
+                <div style="display: flex; align-items: center; gap: 10px">
+                  <span style="font: 400 13px 'Nunito Sans', monospace; color: #4A4A4A">{{c.bg}}</span>
+                  <input id="f-bgc" type="color" value="{{c.bg}}" onChange="{{h.bgColor}}">
+                </div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px">
+                <label for="f-bgi" style="font: 600 13px/18px 'Nunito Sans', sans-serif; color: #4A4A4A">Imagen de fondo (opcional, va sobre el color)</label>
+                <input id="f-bgi" type="file" accept="image/*" onChange="{{h.bgImage}}" style="font: 400 15px 'Nunito Sans', sans-serif">
+              </div>
+              <sc-if value="{{hasBgImage}}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-direction: column; gap: 12px">
+                  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+                    <div style="display: flex; flex-direction: column; gap: 6px">
+                      <label for="f-bgfit" style="font: 600 13px/18px 'Nunito Sans', sans-serif; color: #4A4A4A">Ajuste</label>
+                      <select id="f-bgfit" class="cfg-input" value="{{cfg.bgFit}}" onChange="{{h.bgFit}}">
+                        <option value="cover">Cubrir pantalla</option>
+                        <option value="contain">Imagen completa</option>
+                      </select>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px">
+                      <label for="f-bgo" style="font: 600 13px/18px 'Nunito Sans', sans-serif; color: #4A4A4A">Opacidad: {{cfg.bgOpacity}}%</label>
+                      <input id="f-bgo" type="range" min="5" max="100" step="5" value="{{cfg.bgOpacity}}" onChange="{{h.bgOpacity}}" style="height: 44px">
+                    </div>
+                  </div>
+                  <button type="button" onClick="{{clearBg}}" style="height: 44px; border-radius: 8px; border: 1px solid #B8C0BC; background: #FFFFFF; color: #000; font: 600 15px 'Nunito Sans', sans-serif; cursor: pointer">Quitar imagen de fondo</button>
+                </div>
+              </sc-if>
+
+              <h3 style="margin: 8px 0 0; font: 600 18px/24px 'Hind Madurai', sans-serif; color: #000">Logo</h3>
+              <div style="display: flex; flex-direction: column; gap: 6px">
+                <label for="f-logo" style="font: 600 13px/18px 'Nunito Sans', sans-serif; color: #4A4A4A">Imagen del logo (PNG, SVG o JPG)</label>
+                <input id="f-logo" type="file" accept="image/*" onChange="{{h.logo}}" style="font: 400 15px 'Nunito Sans', sans-serif">
+              </div>
+              <sc-if value="{{hasLogo}}" hint-placeholder-val="{{ false }}">
+                <button type="button" onClick="{{clearLogo}}" style="height: 44px; border-radius: 8px; border: 1px solid #B8C0BC; background: #FFFFFF; color: #000; font: 600 15px 'Nunito Sans', sans-serif; cursor: pointer">Quitar logo</button>
+              </sc-if>
+
+              <h3 style="margin: 8px 0 0; font: 600 18px/24px 'Hind Madurai', sans-serif; color: #000">Títulos y texto</h3>
+              <div style="display: flex; flex-direction: column; gap: 6px">
+                <label for="f-title" style="font: 600 13px/18px 'Nunito Sans', sans-serif; color: #4A4A4A">Título del evento</label>
+                <input id="f-title" class="cfg-input" type="text" value="{{cfg.title}}" onChange="{{h.title}}">
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px">
+                <label for="f-sub" style="font: 600 13px/18px 'Nunito Sans', sans-serif; color: #4A4A4A">Subtítulo</label>
+                <input id="f-sub" class="cfg-input" type="text" value="{{cfg.subtitle}}" onChange="{{h.subtitle}}">
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px">
+                <label for="f-foot" style="font: 600 13px/18px 'Nunito Sans', sans-serif; color: #4A4A4A">Texto inferior</label>
+                <input id="f-foot" class="cfg-input" type="text" value="{{cfg.footer}}" onChange="{{h.footer}}">
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{tabTurns}}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 14px">
+              <h3 style="margin: 0; font: 600 18px/24px 'Hind Madurai', sans-serif; color: #000">Orden de los turnos</h3>
+              <sc-for list="{{turnRows}}" as="item" hint-placeholder-count="3">
+                <div style="border: 1px solid #D5DBD8; border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 10px; background: #F4F6F5">
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+                    <span style="font: 700 15px 'Nunito Sans', sans-serif; color: #000">Turno {{item.num}}</span>
+                    <sc-if value="{{item.isCurrent}}" hint-placeholder-val="{{ false }}">
+                      <span style="font: 600 12px/16px 'Nunito Sans', sans-serif; padding: 4px 8px; border-radius: 4px; background: #10A13B; color: #FFFFFF">En curso</span>
+                    </sc-if>
+                  </div>
+                  <label for="t-name-{{$index}}" style="font: 600 13px/18px 'Nunito Sans', sans-serif; color: #4A4A4A">Nombre del ponente</label>
+                  <input id="t-name-{{$index}}" class="cfg-input" type="text" value="{{item.name}}" onChange="{{item.onName}}">
+                  <label for="t-prof-{{$index}}" style="font: 600 13px/18px 'Nunito Sans', sans-serif; color: #4A4A4A">Profesión</label>
+                  <input id="t-prof-{{$index}}" class="cfg-input" type="text" value="{{item.profession}}" onChange="{{item.onProf}}">
+                  <div style="display: flex; align-items: flex-end; gap: 8px">
+                    <div style="display: flex; flex-direction: column; gap: 6px; width: 110px">
+                      <label for="t-min-{{$index}}" style="font: 600 13px/18px 'Nunito Sans', sans-serif; color: #4A4A4A">Minutos</label>
+                      <input id="t-min-{{$index}}" class="cfg-input" type="number" min="1" max="180" value="{{item.minutes}}" onChange="{{item.onMin}}">
+                    </div>
+                    <button type="button" onClick="{{item.go}}" style="flex: 1; height: 44px; border-radius: 8px; border: 0; background: #003366; color: #FFFFFF; font: 700 14px 'Nunito Sans', sans-serif; cursor: pointer">Ir a este turno</button>
+                    <button type="button" aria-label="Eliminar turno {{item.num}}" onClick="{{item.remove}}" style="width: 44px; height: 44px; border-radius: 8px; border: 1px solid #B8C0BC; background: #FFFFFF; color: #A61B1B; display: flex; align-items: center; justify-content: center; cursor: pointer">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"></path><path d="M9 7V4h6v3"></path><path d="M6 7l1 13h10l1-13"></path></svg>
+                    </button>
+                  </div>
+                </div>
+              </sc-for>
+              <button type="button" onClick="{{addTurn}}" style="height: 48px; border-radius: 8px; border: 0; background: #10A13B; color: #FFFFFF; font: 700 15px 'Nunito Sans', sans-serif; cursor: pointer">+ Agregar turno</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{tabColors}}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 12px">
+              <h3 style="margin: 0; font: 600 18px/24px 'Hind Madurai', sans-serif; color: #000">Colores de la interfaz</h3>
+              <sc-for list="{{colorRows}}" as="cr" hint-placeholder-count="8">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid #ECEFEE">
+                  <label for="c-{{cr.key}}" style="font: 600 15px/20px 'Nunito Sans', sans-serif; color: #000">{{cr.label}}</label>
+                  <div style="display: flex; align-items: center; gap: 10px">
+                    <span style="font: 400 13px 'Nunito Sans', monospace; color: #4A4A4A">{{cr.value}}</span>
+                    <input id="c-{{cr.key}}" type="color" value="{{cr.value}}" onChange="{{cr.on}}">
+                  </div>
+                </div>
+              </sc-for>
+              <button type="button" onClick="{{resetColors}}" style="height: 44px; border-radius: 8px; border: 1px solid #B8C0BC; background: #FFFFFF; color: #000; font: 600 15px 'Nunito Sans', sans-serif; cursor: pointer">Restablecer colores institucionales</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{tabSound}}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 14px">
+              <h3 style="margin: 0; font: 600 18px/24px 'Hind Madurai', sans-serif; color: #000">Sonido y voz</h3>
+              <label style="display: flex; align-items: center; gap: 10px; min-height: 44px; font: 600 15px 'Nunito Sans', sans-serif; color: #000">
+                <input type="checkbox" checked="{{cfg.sound}}" onChange="{{h.sound}}" style="width: 22px; height: 22px">
+                Alerta sonora a 1 minuto y al terminar
+              </label>
+              <label style="display: flex; align-items: center; gap: 10px; min-height: 44px; font: 600 15px 'Nunito Sans', sans-serif; color: #000">
+                <input type="checkbox" checked="{{cfg.voice}}" onChange="{{h.voice}}" style="width: 22px; height: 22px">
+                Anuncios por voz
+              </label>
+              <h3 style="margin: 8px 0 0; font: 600 16px/22px 'Hind Madurai', sans-serif; color: #000">ElevenLabs</h3>
+              <div style="display: flex; flex-direction: column; gap: 6px">
+                <label for="f-key" style="font: 600 13px/18px 'Nunito Sans', sans-serif; color: #4A4A4A">API key</label>
+                <input id="f-key" class="cfg-input" type="password" autocomplete="off" placeholder="xi-api-key" value="{{cfg.elKey}}" onChange="{{h.elKey}}">
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px">
+                <label for="f-voice" style="font: 600 13px/18px 'Nunito Sans', sans-serif; color: #4A4A4A">ID de voz</label>
+                <input id="f-voice" class="cfg-input" type="text" placeholder="voice_id" value="{{cfg.elVoice}}" onChange="{{h.elVoice}}">
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px">
+                <label for="f-model" style="font: 600 13px/18px 'Nunito Sans', sans-serif; color: #4A4A4A">Modelo</label>
+                <input id="f-model" class="cfg-input" type="text" value="{{cfg.elModel}}" onChange="{{h.elModel}}">
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px">
+                <label for="f-end" style="font: 600 13px/18px 'Nunito Sans', sans-serif; color: #4A4A4A">Frase al terminar el tiempo</label>
+                <input id="f-end" class="cfg-input" type="text" value="{{cfg.endPhrase}}" onChange="{{h.endPhrase}}">
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px">
+                <label for="f-start" style="font: 600 13px/18px 'Nunito Sans', sans-serif; color: #4A4A4A">Frase al iniciar turno (antes del nombre)</label>
+                <input id="f-start" class="cfg-input" type="text" value="{{cfg.startPhrase}}" onChange="{{h.startPhrase}}">
+              </div>
+              <p style="margin: 0; font: 400 14px/20px 'Nunito Sans', sans-serif; color: #4A4A4A">{{voiceStatus}}</p>
+              <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+                <button type="button" onClick="{{testEnd}}" style="height: 44px; border-radius: 8px; border: 0; background: #003366; color: #FFFFFF; font: 700 14px 'Nunito Sans', sans-serif; cursor: pointer">Probar fin de turno</button>
+                <button type="button" onClick="{{testStart}}" style="height: 44px; border-radius: 8px; border: 1px solid #003366; background: #FFFFFF; color: #003366; font: 700 14px 'Nunito Sans', sans-serif; cursor: pointer">Probar inicio</button>
+              </div>
+            </div>
+          </sc-if>
+
+        </div>
+      </section>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"bg":{"editor":"color","default":"#FFFFFF","options":["#FFFFFF","#F4F6F5","#003366","#000000"]},"$preview":{"width":1440,"height":900}}'>
+var DEFAULT_COLORS = {
+  bg: '#FFFFFF', title: '#000000', subtitle: '#4A4A4A', header: '#003366',
+  green: '#10A13B', yellow: '#FFD500', red: '#D62828',
+  speaker: '#000000', profession: '#4A4A4A', text: '#4A4A4A', accent: '#10A13B',
+  onYellow: '#FFFFFF', onRed: '#FFFFFF'
+};
+var COLOR_LABELS = [
+  ['bg', 'Fondo'], ['title', 'Título del evento'], ['subtitle', 'Subtítulo'], ['header', 'Botones y menú'],
+  ['green', 'Contador: tiempo normal'], ['yellow', 'Contador: franja de advertencia'], ['red', 'Contador: franja final'],
+  ['speaker', 'Nombre del ponente'], ['profession', 'Profesión'], ['text', 'Texto inferior'], ['accent', 'Acento y botón siguiente'],
+  ['onYellow', 'Texto sobre franja amarilla (fondo)'], ['onRed', 'Texto sobre franja roja (fondo)']
+];
+
+var VERT = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
+var FRAG = [
+  'precision highp float;',
+  'uniform sampler2D uTex; uniform vec2 uRes; uniform float uTexAspect; uniform float uTime;',
+  'uniform float uPhase; uniform float uK; uniform float uFlash; uniform float uTop; uniform float uBot;',
+  'uniform vec3 uGreen; uniform vec3 uYellow; uniform vec3 uRed;',
+  'uniform float uMode; uniform float uLinePx; uniform vec3 uOnY; uniform vec3 uOnR;',
+  'varying vec2 vUv;',
+  'void main(){',
+  '  float ca = uRes.x / uRes.y; vec2 t = vUv;',
+  '  if (ca > uTexAspect) { t.x = (t.x - 0.5) * (ca / uTexAspect) + 0.5; } else { t.y = (t.y - 0.5) * (uTexAspect / ca) + 0.5; }',
+  '  t = (t - 0.5) * (1.0 + 0.35 * uFlash) + 0.5;',
+  '  if (t.x < 0.0 || t.x > 1.0 || t.y < 0.0 || t.y > 1.0) discard;',
+  '  float a = texture2D(uTex, t).a;',
+  '  if (a < 0.005) discard;',
+  '  vec3 col = uGreen;',
+  '  if (uMode > 0.5) {',
+  '    bool under = gl_FragCoord.y <= uLinePx;',
+  '    if (uPhase < 0.5) { col = uGreen; }',
+  '    else if (uPhase < 1.5) { col = under ? uOnY : uGreen; }',
+  '    else if (uPhase < 2.5) { col = under ? uOnR : uOnY; }',
+  '    else { col = uOnR; }',
+  '  } else if (uPhase > 0.5 && uPhase < 2.5) {',
+  '    vec3 base = uPhase < 1.5 ? uGreen : uYellow;',
+  '    vec3 band = uPhase < 1.5 ? uYellow : uRed;',
+  '    float level = mix(uBot, uTop, uK);',
+  '    col = t.y <= level ? band : base;',
+  '  } else if (uPhase >= 2.5) {',
+  '    col = uRed * (0.88 + 0.12 * step(0.0, sin(uTime * 6.0)));',
+  '  }',
+  '  gl_FragColor = vec4(col, a * (1.0 - 0.9 * uFlash));',
+  '}'
+].join('\n');
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    var colors = Object.assign({}, DEFAULT_COLORS, { bg: props.bg || DEFAULT_COLORS.bg });
+    var turns = [
+      { name: '[Nombre del ponente 1]', profession: '[Profesión]', minutes: 5 },
+      { name: '[Nombre del ponente 2]', profession: '[Profesión]', minutes: 5 },
+      { name: '[Nombre del ponente 3]', profession: '[Profesión]', minutes: 5 }
+    ];
+    this.state = {
+      menuOpen: false, tab: 'general', running: false, idx: 0,
+      remaining: turns[0].minutes * 60, total: turns[0].minutes * 60, noGL: false,
+      turns: turns,
+      cfg: {
+        title: '[Nombre del evento]', subtitle: '[Lugar · fecha]', footer: '[Texto inferior]',
+        logo: '', fxTarget: 'text', bgImage: '', bgFit: 'cover', bgOpacity: 100, minutes: 5, yellowAt: 120, redAt: 60, sound: true, voice: true,
+        elKey: '', elVoice: '', elModel: 'eleven_multilingual_v2',
+        endPhrase: 'Su turno ha terminado', startPhrase: 'Inicia la ponencia de',
+        colors: colors
+      }
+    };
+    this.rem = this.state.remaining;
+    this.flash = 0;
+    this.last = Date.now();
+    this.gl = null;
+  }
+
+  componentDidMount() {
+    var self = this;
+    this.iv = setInterval(function () { self.tick(); }, 200);
+  }
+
+  componentWillUnmount() {
+    clearInterval(this.iv);
+    if (this.raf) cancelAnimationFrame(this.raf);
+    if (this.ro) this.ro.disconnect();
+    if (this.gl) { this.gl.renderer.dispose(); this.gl = null; }
+  }
+
+  /* ---------- timer ---------- */
+  tick() {
+    var now = Date.now(); var dt = (now - this.last) / 1000; this.last = now;
+    if (!this.state.running) return;
+    var cfg = this.state.cfg;
+    var prev = this.rem;
+    this.rem = Math.max(0, this.rem - dt);
+    if (prev > 60 && this.rem <= 60 && cfg.sound) this.chimeMinute();
+    if (prev > 0 && this.rem <= 0) {
+      if (cfg.sound) this.chimeEnd();
+      var self = this;
+      setTimeout(function () { self.speak(self.state.cfg.endPhrase); }, 1300);
+      this.setState({ running: false, remaining: 0 });
+      return;
+    }
+    var sec = Math.ceil(this.rem);
+    if (sec !== this.state.remaining) this.setState({ remaining: sec });
+  }
+
+  loadTurn(i, autostart) {
+    var t = this.state.turns[i]; if (!t) return;
+    var total = Math.max(1, Number(t.minutes) || 1) * 60;
+    this.rem = total; this.last = Date.now(); this.flash = 1;
+    this.setState({ idx: i, total: total, remaining: total, running: !!autostart });
+  }
+
+  /* ---------- audio ---------- */
+  ensureAudio() {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!this.ac && AC) this.ac = new AC();
+    if (this.ac && this.ac.state === 'suspended') this.ac.resume();
+  }
+  tone(freq, at, dur, vol) {
+    if (!this.ac) return;
+    var t0 = this.ac.currentTime + at;
+    var o = this.ac.createOscillator(); var g = this.ac.createGain();
+    o.type = 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol, t0 + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(this.ac.destination); o.start(t0); o.stop(t0 + dur + 0.05);
+  }
+  chimeMinute() { this.ensureAudio(); this.tone(880, 0, 0.35, 0.35); this.tone(1175, 0.28, 0.5, 0.35); }
+  chimeEnd() { this.ensureAudio(); this.tone(784, 0, 0.45, 0.4); this.tone(659, 0.32, 0.45, 0.4); this.tone(523, 0.64, 0.9, 0.45); }
+
+  speak(text) {
+    var cfg = this.state.cfg;
+    if (!cfg.voice || !text) return;
+    var self = this;
+    if (cfg.elKey && cfg.elVoice) {
+      fetch('https://api.elevenlabs.io/v1/text-to-speech/' + encodeURIComponent(cfg.elVoice), {
+        method: 'POST',
+        headers: { 'xi-api-key': cfg.elKey, 'Content-Type': 'application/json', 'Accept': 'audio/mpeg' },
+        body: JSON.stringify({ text: text, model_id: cfg.elModel || 'eleven_multilingual_v2' })
+      }).then(function (r) { if (!r.ok) throw new Error('tts'); return r.blob(); })
+        .then(function (b) { var a = new Audio(URL.createObjectURL(b)); return a.play(); })
+        .catch(function () { self.speakLocal(text); });
+    } else {
+      this.speakLocal(text);
+    }
+  }
+  speakLocal(text) {
+    if (!window.speechSynthesis) return;
+    var u = new SpeechSynthesisUtterance(text); u.lang = 'es-CO'; u.rate = 1;
+    window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);
+  }
+
+  /* ---------- three.js ---------- */
+  initGL(canvas) {
+    var T = window.THREE;
+    if (!T) { this.setState({ noGL: true }); return; }
+    try {
+      var renderer = new T.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+      renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+      renderer.setClearColor(0x000000, 0);
+      var scene = new T.Scene();
+      var cam = new T.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+      var tc = document.createElement('canvas'); tc.width = 2048; tc.height = 600;
+      var tex = new T.CanvasTexture(tc); tex.minFilter = T.LinearFilter; tex.generateMipmaps = false;
+      var u = {
+        uTex: { value: tex }, uRes: { value: new T.Vector2(1, 1) }, uTexAspect: { value: 2048 / 600 },
+        uTime: { value: 0 }, uPhase: { value: 0 }, uK: { value: 0 }, uFlash: { value: 0 },
+        uTop: { value: 0.85 }, uBot: { value: 0.15 },
+        uMode: { value: 0 }, uLinePx: { value: -1 }, uOnY: { value: new T.Color() }, uOnR: { value: new T.Color() },
+        uGreen: { value: new T.Color() }, uYellow: { value: new T.Color() }, uRed: { value: new T.Color() }
+      };
+      var mat = new T.ShaderMaterial({ uniforms: u, vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthTest: false });
+      scene.add(new T.Mesh(new T.PlaneGeometry(2, 2), mat));
+      this.gl = { T: T, canvas: canvas, renderer: renderer, scene: scene, cam: cam, tc: tc, tex: tex, u: u, text: null };
+      var self = this;
+      var fit = function () {
+        var r = canvas.getBoundingClientRect();
+        var w = Math.max(1, Math.round(r.width)), h = Math.max(1, Math.round(r.height));
+        renderer.setSize(w, h, false); u.uRes.value.set(w, h);
+      };
+      fit();
+      if (window.ResizeObserver) { this.ro = new ResizeObserver(fit); this.ro.observe(canvas); }
+      if (document.fonts && document.fonts.load) {
+        document.fonts.load('700 120px "Hind Madurai"').then(function () { if (self.gl) self.gl.text = null; });
+      }
+      var t0 = performance.now(), prev = t0;
+      var loop = function (now) {
+        if (!self.gl) return;
+        var dt = (now - prev) / 1000; prev = now;
+        self.frame((now - t0) / 1000, dt);
+        self.raf = requestAnimationFrame(loop);
+      };
+      this.raf = requestAnimationFrame(loop);
+    } catch (e) {
+      this.setState({ noGL: true });
+    }
+  }
+
+  drawText(str) {
+    var g = this.gl, c = g.tc, ctx = c.getContext('2d');
+    ctx.clearRect(0, 0, c.width, c.height);
+    var size = 520;
+    ctx.font = '700 ' + size + 'px "Hind Madurai", system-ui, sans-serif';
+    var dw = 0; '0123456789'.split('').forEach(function (d) { dw = Math.max(dw, ctx.measureText(d).width); });
+    var cw = ctx.measureText(':').width * 1.25;
+    var cells = str.split('').map(function (ch) { return ch === ':' ? cw : dw; });
+    var total = cells.reduce(function (s, v) { return s + v; }, 0);
+    var scale = Math.min(1, (c.width - 60) / total);
+    if (scale < 1) {
+      size = Math.floor(size * scale); ctx.font = '700 ' + size + 'px "Hind Madurai", system-ui, sans-serif';
+      cells = cells.map(function (v) { return v * scale; }); total *= scale;
+    }
+    var m = ctx.measureText('0');
+    var asc = m.actualBoundingBoxAscent || size * 0.7, desc = m.actualBoundingBoxDescent || 0;
+    var y = c.height / 2 + (asc - desc) / 2;
+    g.u.uTop.value = 1 - (y - asc) / c.height;
+    g.u.uBot.value = 1 - (y + desc) / c.height;
+    ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    var x = (c.width - total) / 2;
+    str.split('').forEach(function (ch, i) { ctx.fillText(ch, x + cells[i] / 2, ch === ':' ? y - size * 0.04 : y); x += cells[i]; });
+    g.tex.needsUpdate = true;
+  }
+
+  frame(time, dt) {
+    var g = this.gl, u = g.u, cfg = this.state.cfg, col = cfg.colors;
+    var str = this.fmt(this.rem);
+    if (g.text !== str) { g.text = str; this.drawText(str); }
+    this.flash = Math.max(0, this.flash - dt * 1.6);
+    var ph = this.phase(this.rem);
+    u.uTime.value = time; u.uPhase.value = ph.phase; u.uK.value = ph.k;
+    u.uFlash.value = this.flash * this.flash;
+    u.uGreen.value.set(col.green); u.uYellow.value.set(col.yellow); u.uRed.value.set(col.red);
+    u.uOnY.value.set(col.onYellow || '#FFFFFF'); u.uOnR.value.set(col.onRed || '#FFFFFF');
+    var bgMode = cfg.fxTarget === 'bg';
+    u.uMode.value = bgMode ? 1 : 0;
+    this.applyBgFx(bgMode, ph, col, g.canvas, g.renderer.getPixelRatio());
+    g.renderer.render(g.scene, g.cam);
+  }
+
+  /* Franja sobre el fondo: capa sólida que sube de abajo hacia arriba y textos que cambian de color al quedar cubiertos */
+  applyBgFx(bgMode, ph, col, canvas, pr) {
+    var root = this.rootEl, base = this.baseEl, band = this.bandEl;
+    if (!root || !base || !band) return;
+    var rr = root.getBoundingClientRect();
+    var active = bgMode && (ph.phase === 1 || ph.phase === 2);
+    var level = active ? rr.height * ph.k : 0;
+    base.style.background = !bgMode ? 'transparent' : (ph.phase === 2 ? col.yellow : (ph.phase === 3 ? col.red : 'transparent'));
+    band.style.height = (active ? ph.k * 100 : 0) + '%';
+    band.style.background = ph.phase === 1 ? col.yellow : col.red;
+    if (canvas && this.gl) {
+      var cr = canvas.getBoundingClientRect();
+      this.gl.u.uLinePx.value = (level - (rr.bottom - cr.bottom)) * pr;
+    }
+    var onY = col.onYellow || '#FFFFFF', onR = col.onRed || '#FFFFFF';
+    var els = root.querySelectorAll('[data-fx]');
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i], orig = el.getAttribute('data-c') || '';
+      var out = orig;
+      if (bgMode && ph.phase > 0) {
+        var r = el.getBoundingClientRect();
+        var under = (rr.bottom - (r.top + r.bottom) / 2) <= level;
+        if (ph.phase === 1) out = under ? onY : orig;
+        else if (ph.phase === 2) out = under ? onR : onY;
+        else out = onR;
+      }
+      if (el.style.color !== out) el.style.color = out;
+    }
+  }
+
+  phase(rem) {
+    var cfg = this.state.cfg;
+    var R = Math.max(1, Number(cfg.redAt) || 60);
+    var Y = Math.max(R + 1, Number(cfg.yellowAt) || 120);
+    if (rem <= 0) return { phase: 3, k: 1 };
+    if (rem <= R) return { phase: 2, k: 1 - rem / R };
+    if (rem <= Y) return { phase: 1, k: 1 - (rem - R) / (Y - R) };
+    return { phase: 0, k: 0 };
+  }
+
+  fmt(rem) {
+    var s = Math.max(0, Math.ceil(rem));
+    var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return h > 0 ? h + ':' + p(m) + ':' + p(ss) : p(m) + ':' + p(ss);
+  }
+
+  /* ---------- state helpers ---------- */
+  setCfg(k, v) { this.setState(function (s) { var c = Object.assign({}, s.cfg); c[k] = v; return { cfg: c }; }); }
+  setColor(k, v) { this.setState(function (s) { var colors = Object.assign({}, s.cfg.colors); colors[k] = v; return { cfg: Object.assign({}, s.cfg, { colors: colors }) }; }); }
+  setTurn(i, k, v) {
+    var self = this;
+    this.setState(function (s) {
+      var turns = s.turns.slice(); var t = Object.assign({}, turns[i]); t[k] = v; turns[i] = t;
+      var out = { turns: turns };
+      if (k === 'minutes' && i === s.idx && !s.running) {
+        var total = Math.max(1, Number(v) || 1) * 60; self.rem = total; out.total = total; out.remaining = total;
+      }
+      return out;
+    });
+  }
+
+  renderVals() {
+    var self = this, s = this.state, cfg = s.cfg, c = cfg.colors;
+    var turns = s.turns, idx = Math.min(s.idx, Math.max(0, turns.length - 1));
+    var current = turns[idx] || { name: '[Sin turnos configurados]', profession: '' };
+    var nextT = turns[idx + 1];
+    var ph = this.phase(s.remaining);
+    var phaseColor = ph.phase === 0 ? c.green : (ph.phase === 1 ? c.yellow : c.red);
+    var ended = s.remaining <= 0;
+    var input = function (k, num) { return function (e) { var v = e.target.value; self.setCfg(k, num ? Number(v) : v); }; };
+
+    var tabDefs = [['general', 'General'], ['turns', 'Turnos'], ['colors', 'Colores'], ['sound', 'Sonido']];
+    var tabs = tabDefs.map(function (d) {
+      var sel = s.tab === d[0];
+      return {
+        label: d[1], sel: sel ? 'true' : 'false',
+        pick: function () { self.setState({ tab: d[0] }); },
+        style: 'height: 52px; border: 0; border-bottom: 3px solid ' + (sel ? '#10A13B' : 'transparent') + '; background: ' + (sel ? '#F4F6F5' : '#FFFFFF') + '; color: ' + (sel ? '#000000' : '#4A4A4A') + '; font: ' + (sel ? '700' : '600') + ' 15px "Nunito Sans", sans-serif; cursor: pointer'
+      };
+    });
+
+    return {
+      cfg: cfg, c: c, current: current,
+      hasLogo: !!cfg.logo, noLogo: !cfg.logo,
+      hasBgImage: !!cfg.bgImage, bgOpacity: String((Number(cfg.bgOpacity) || 100) / 100),
+      clearBg: function () { self.setCfg('bgImage', ''); },
+      noGL: s.noGL, timeText: this.fmt(s.remaining), fallbackColor: phaseColor,
+      progressPct: s.total ? Math.round((1 - s.remaining / s.total) * 1000) / 10 : 0,
+      running: s.running, paused: !s.running,
+      toggleLabel: s.running ? 'Pausar' : (ended ? 'Reiniciar e iniciar' : (s.remaining < s.total ? 'Continuar' : 'Iniciar')),
+      statusLabel: ended ? 'Tiempo terminado' : (s.running ? 'En curso' : 'En pausa'),
+      statusBg: ended ? '#A61B1B' : (s.running ? '#10A13B' : '#F4F6F5'),
+      statusFg: ended || s.running ? '#FFFFFF' : '#000000',
+      turnLabel: turns.length ? (idx + 1) + ' de ' + turns.length : '0 de 0',
+      nextLabel: nextT ? 'Siguiente: ' + nextT.name + ' · ' + nextT.profession : 'Último turno de la jornada',
+      isLast: !nextT, nextOpacity: nextT ? '1' : '0.4',
+      menuOpen: s.menuOpen, menuOpenStr: s.menuOpen ? 'true' : 'false',
+      tabs: tabs,
+      tabGeneral: s.tab === 'general', tabTurns: s.tab === 'turns', tabColors: s.tab === 'colors', tabSound: s.tab === 'sound',
+      voiceStatus: cfg.elKey && cfg.elVoice
+        ? 'Voz de ElevenLabs configurada. Si la conexión falla, se usa la voz del navegador.'
+        : 'Sin credenciales de ElevenLabs: se usa la voz del navegador como vista previa.',
+
+      setCanvas: function (el) { if (el && !self.gl) self.initGL(el); },
+      setRoot: function (el) { if (el) self.rootEl = el; },
+      setBase: function (el) { if (el) self.baseEl = el; },
+      setBand: function (el) { if (el) self.bandEl = el; },
+      openMenu: function () { self.setState({ menuOpen: true }); },
+      closeMenu: function () { self.setState({ menuOpen: false }); },
+      toggle: function () {
+        self.ensureAudio();
+        if (s.running) { self.setState({ running: false }); return; }
+        if (self.rem <= 0) { self.rem = s.total; self.flash = 1; }
+        self.last = Date.now();
+        self.setState({ running: true, remaining: Math.ceil(self.rem) });
+      },
+      reset: function () { self.loadTurn(idx, false); },
+      next: function () {
+        if (!nextT) return;
+        self.ensureAudio();
+        self.loadTurn(idx + 1, true);
+        self.speak(cfg.startPhrase + ' ' + nextT.name + ', ' + nextT.profession);
+      },
+
+      h: {
+        minutes: input('minutes', true), yellowAt: input('yellowAt', true), redAt: input('redAt', true),
+        title: input('title'), subtitle: input('subtitle'), footer: input('footer'),
+        elKey: input('elKey'), elVoice: input('elVoice'), elModel: input('elModel'),
+        endPhrase: input('endPhrase'), startPhrase: input('startPhrase'),
+        sound: function (e) { self.setCfg('sound', e.target.checked); },
+        voice: function (e) { self.setCfg('voice', e.target.checked); },
+        bgColor: function (e) { self.setColor('bg', e.target.value); },
+        fxTarget: input('fxTarget'),
+        bgFit: input('bgFit'), bgOpacity: input('bgOpacity', true),
+        bgImage: function (e) {
+          var f = e.target.files && e.target.files[0]; if (!f) return;
+          var r = new FileReader(); r.onload = function () { self.setCfg('bgImage', r.result); }; r.readAsDataURL(f);
+        },
+        logo: function (e) {
+          var f = e.target.files && e.target.files[0]; if (!f) return;
+          var r = new FileReader(); r.onload = function () { self.setCfg('logo', r.result); }; r.readAsDataURL(f);
+        }
+      },
+      clearLogo: function () { self.setCfg('logo', ''); },
+      applyMinutes: function () {
+        var m = Math.max(1, Number(cfg.minutes) || 1);
+        self.setState(function (st) { return { turns: st.turns.map(function (t) { return Object.assign({}, t, { minutes: m }); }) }; },
+          function () { self.loadTurn(idx, false); });
+      },
+
+      turnRows: turns.map(function (t, i) {
+        return {
+          num: i + 1, name: t.name, profession: t.profession, minutes: t.minutes, isCurrent: i === idx,
+          onName: function (e) { self.setTurn(i, 'name', e.target.value); },
+          onProf: function (e) { self.setTurn(i, 'profession', e.target.value); },
+          onMin: function (e) { self.setTurn(i, 'minutes', Number(e.target.value)); },
+          go: function () { self.loadTurn(i, false); },
+          remove: function () {
+            self.setState(function (st) {
+              var list = st.turns.filter(function (_, j) { return j !== i; });
+              return { turns: list, idx: Math.min(st.idx, Math.max(0, list.length - 1)) };
+            });
+          }
+        };
+      }),
+      addTurn: function () {
+        self.setState(function (st) {
+          return { turns: st.turns.concat([{ name: '[Nombre del ponente ' + (st.turns.length + 1) + ']', profession: '[Profesión]', minutes: Number(st.cfg.minutes) || 5 }]) };
+        });
+      },
+
+      colorRows: COLOR_LABELS.map(function (p) {
+        return { key: p[0], label: p[1], value: c[p[0]], on: function (e) { self.setColor(p[0], e.target.value); } };
+      }),
+      resetColors: function () { self.setCfg('colors', Object.assign({}, DEFAULT_COLORS)); },
+      testEnd: function () { self.ensureAudio(); if (cfg.sound) self.chimeEnd(); setTimeout(function () { self.speak(cfg.endPhrase); }, 1300); },
+      testStart: function () { self.ensureAudio(); self.speak(cfg.startPhrase + ' ' + current.name + ', ' + current.profession); }
+    };
+  }
+}
+</script>
+</body>
+</html>

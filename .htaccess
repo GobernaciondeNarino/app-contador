@@ -1,0 +1,15 @@
+# Solo aplica si TODO el repositorio quedó dentro de la raíz web (sin cambiar la raíz a /public).
+# Lo recomendado es apuntar la raíz del documento de Plesk a la carpeta public/.
+Options -Indexes
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^(storage|config|src|bin|tests|docs|design|node_modules|graphify-out)(/|$) - [F,L]
+  RewriteRule (^|/)\. - [F,L]
+  RewriteCond %{REQUEST_URI} !/public/
+  RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+<IfModule !mod_rewrite.c>
+  <FilesMatch ".*">
+    Require all denied
+  </FilesMatch>
+</IfModule>

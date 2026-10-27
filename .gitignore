@@ -1,0 +1,26 @@
+# Configuración local con secretos
+/config/config.php
+
+# Datos de ejecución (JSON, imágenes subidas, sesiones)
+/storage/*
+!/storage/.htaccess
+!/storage/web.config
+!/storage/README.md
+!/storage/uploads/
+/storage/uploads/*
+!/storage/uploads/.gitkeep
+!/storage/sessions/
+/storage/sessions/*
+!/storage/sessions/.gitkeep
+
+# Dependencias y resultados de pruebas
+/node_modules/
+/test-results/
+/tests/reports/*.png
+
+# graphify: se versiona graph.json y el reporte; la caché no
+/graphify-out/cache/
+/graphify-out/*.log
+
+.DS_Store
+Thumbs.db
