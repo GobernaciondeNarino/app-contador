@@ -1,6 +1,6 @@
 # Contador de exposiciones — Gobernación de Nariño
 
-- Frontend estático sin dependencias en `public/` (index.html, assets/js/app.js, assets/css/app.css). Todo texto de usuario se pinta con `textContent`; nunca `innerHTML`. La CSP no permite scripts ni estilos en línea: no agregar atributos `style=` ni `<script>` en línea (usar `el.style.x` desde JS).
+- Frontend estático sin dependencias en `public/` (index.html, assets/js/app.js, assets/js/wizard.js, assets/css/app.css). `wizard.js` es el asistente de instalación; recibe de app.js un objeto `ctx` con el estado y las funciones que necesita. Todo texto de usuario se pinta con `textContent`; nunca `innerHTML`. La CSP no permite scripts ni estilos en línea: no agregar atributos `style=` ni `<script>` en línea (usar `el.style.x` desde JS).
 - Backend PHP 7.4+ en `public/api.php` + `src/`; datos en JSON dentro de `storage/` (fuera de la raíz web). Toda escritura pasa por `with_lock()` + `write_json()` y todo dato guardado por `normalize_state()` en `src/validate.php`.
 - Si se agrega un color o campo de configuración, actualizar a la vez `DEFAULT_COLORS`/`defaultCfg()` en app.js y `COLOR_KEYS`/`DEFAULT_COLORS`/`normalize_state()` en validate.php.
 - Identidad visual: Hind Madurai (títulos), Nunito Sans (texto), `#10A13B`, `#FFD500`, `#003366`, `#4A4A4A`. Mantener contraste WCAG 2.1 AA.

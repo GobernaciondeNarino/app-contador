@@ -12,3 +12,11 @@ Etiquetas: wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa
 | Configuración · access | 0 | — |
 | Franja amarilla en el fondo | 0 | — |
 | Móvil 320 px | 0 | — |
+| Asistente · 1 Servidor | 0 | color-contrast (9) |
+| Asistente · 2 Administrador | 0 | — |
+| Asistente · 3 Evento | 0 | — |
+| Asistente · 4 Tiempos | 0 | — |
+| Asistente · 5 Ponentes | 0 | color-contrast (1) |
+| Asistente · 6 Voz | 0 | — |
+| Asistente · 7 Resumen | 0 | — |
+| Asistente · móvil 320 px | 0 | color-contrast (10) |

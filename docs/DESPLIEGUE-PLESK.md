@@ -49,7 +49,9 @@ La carpeta `public/` es la única que debe quedar expuesta a internet. El resto 
 >
 > Como respaldo, el `.htaccess` de la raíz del repositorio y los `.htaccess`/`web.config` de cada carpeta privada bloquean el acceso aunque todo quede dentro de `httpdocs`.
 
-## 5. Configuración
+## 5. Configuración (opcional)
+
+`config/config.php` es **opcional**: sin él, la aplicación usa valores por defecto y el asistente genera su propio token de instalación (paso 6). Créelo solo si necesita cambiar algún valor, por ejemplo fijar la API key de ElevenLabs en el servidor:
 
 1. Copie `config/config.example.php` como `config/config.php` (Administrador de archivos → Copiar).
 2. Edite `config/config.php`:
@@ -65,26 +67,44 @@ return [
 ];
 ```
 
-Para generar el token puede usar el generador de contraseñas de Plesk o un gestor de contraseñas. **Debe tener al menos 16 caracteres** (se recomiendan 32); con menos, la pestaña *Acceso* no muestra el formulario y avisa que el token es demasiado corto.
+`setup_token` también es opcional. Si lo define, **debe tener al menos 16 caracteres** (se recomiendan 32); si queda vacío o es más corto, se ignora y el asistente usa el token generado en `storage/setup-token.php`.
 
 3. Permisos: `storage/` y sus subcarpetas con **750** y propietario el usuario de la suscripción. En Plesk Linux esto es lo predeterminado al subir archivos con ese usuario. Los archivos que crea la aplicación quedan con permisos **640**.
 
-## 6. Crear la contraseña de administrador
+## 6. Asistente de instalación
 
-**Desde el navegador (sin SSH):**
+Al abrir el sitio por primera vez (`https://ejemplo.gov.co/`) aparece el **asistente de instalación**. Se muestra automáticamente mientras no exista administrador o configuración guardada, y tiene 7 pasos:
 
-1. Abra `https://ejemplo.gov.co/`, pulse el botón de menú (☰) → pestaña **Acceso**.
-2. Escriba el **token de configuración** (el `setup_token` de `config.php`) y la nueva contraseña (12 caracteres o más).
-3. Una vez creada, borre el valor de `setup_token` en `config.php` (la configuración web solo funciona mientras no exista contraseña, pero es buena práctica dejarlo vacío).
+| Paso | Qué hace |
+|---|---|
+| 1. Servidor | Verifica PHP 7.4+, extensiones (`json`, `session`, `mbstring`, `fileinfo`, `curl`), permisos de escritura en `storage/`, `config.php`, HTTPS, límite de subida y que `storage/` **no** se pueda descargar desde internet. No deja continuar si hay errores |
+| 2. Administrador | Crea la contraseña (12+ caracteres) con el **token de instalación** |
+| 3. Evento | Nombre del evento, lugar y fecha, texto inferior, logo y color de fondo |
+| 4. Tiempos | Minutos por turno, inicio de la franja amarilla y roja, efecto de la franja |
+| 5. Ponentes | Lista de ponentes en orden, con profesión y minutos de cada uno |
+| 6. Voz | Alertas sonoras, anuncios por voz, API key e ID de voz de ElevenLabs (opcional) |
+| 7. Resumen | Revisión y **Guardar y abrir el contador** |
 
-**Desde consola (SSH o Tareas programadas de Plesk):**
+### Dónde está el token de instalación
+
+El token evita que un desconocido que llegue primero al sitio se quede con la cuenta de administrador. Solo lo puede leer quien administra el hosting:
+
+- **Si `config/config.php` tiene un `setup_token` de 16+ caracteres:** use ese valor.
+- **Si no:** el servidor genera uno al abrir el asistente. En Plesk vaya a **Archivos → `storage/setup-token.php`**, ábralo con *Editar en editor de texto* y copie el código que aparece después de `TOKEN:`. Ese archivo responde 404 si alguien lo pide por web y **se borra solo** al crear la contraseña.
+
+Después de instalar:
+
+- El asistente no vuelve a aparecer. Se puede abrir otra vez desde ☰ → **Acceso** → *Abrir asistente de configuración* (con sesión iniciada) para cambiar evento, tiempos y ponentes.
+- Si pulsa **Omitir por ahora**, el asistente no se vuelve a mostrar en esa ventana del navegador; se puede abrir desde ☰ → **Acceso** → *Abrir asistente de instalación*.
+
+### Alternativa por consola (SSH o Tareas programadas de Plesk)
 
 ```bash
 cd /var/www/vhosts/ejemplo.gov.co/httpdocs
 php bin/set-password.php
 ```
 
-Ese mismo comando sirve para **restablecer** una contraseña olvidada.
+Crea la contraseña sin token (el asistente pasa directo al inicio de sesión) y sirve también para **restablecer** una contraseña olvidada.
 
 ## 7. HTTPS y cabeceras
 
@@ -145,7 +165,7 @@ done
 
 1. Abra el sitio en el equipo conectado al proyector, en pantalla completa (F11).
 2. Menú ☰ → **Acceso** → inicie sesión (necesario para guardar y para la voz de ElevenLabs).
-3. Configure turnos, tiempos, colores, logo y fondo → **Guardar cambios**.
+3. Para un evento nuevo use **Abrir asistente de configuración**; para ajustes puntuales (colores, imagen de fondo, orden) use las pestañas del menú → **Guardar cambios**.
 4. Controles: **Iniciar/Pausar**, **Reiniciar** y el botón verde **→** para pasar al siguiente ponente (anuncia el nombre por voz).
 
 Sin sesión iniciada la pantalla funciona igual (muestra la última configuración guardada) y los cambios hechos en el menú solo afectan esa pantalla.
@@ -154,7 +174,9 @@ Sin sesión iniciada la pantalla funciona igual (muestra la última configuraci�
 
 | Síntoma | Causa probable | Solución |
 |---|---|---|
-| *Acceso* dice "Falta crear la contraseña…" o "El setup_token… es demasiado corto" y no muestra formulario | `setup_token` vacío o con menos de 16 caracteres | Use un token de 16+ caracteres en `config/config.php` y recargue la página. Compruebe con `api.php?action=session`: debe mostrar `"setupEnabled":true` |
+| El asistente dice que el token no coincide | Se copió un token distinto | Si `config.php` tiene un `setup_token` de 16+ caracteres, se usa ese; si no, el de `storage/setup-token.php`. `api.php?action=session` indica cuál en `tokenSource` (`config` o `file`) |
+| No aparece `storage/setup-token.php` | `storage/` sin permisos de escritura (el paso 1 lo marca en rojo) | Dé permisos 750 a `storage/` o use `php bin/set-password.php` |
+| El paso 1 marca "Datos protegidos de internet" en rojo | `storage/` se puede descargar por web | Apunte la raíz del documento a `public/` (§3) o revise que los `.htaccess`/`web.config` estén subidos; en nginx puro aplique las directivas de §7 |
 | "No se detectó el servidor (api.php)" | PHP desactivado o raíz del documento incorrecta | Active PHP en la suscripción y verifique que la raíz apunte a `public/` |
 | Error 500 "La carpeta de datos…" | `storage/` sin permisos de escritura o fuera de `open_basedir` | Ajuste permisos (750) o `storage_dir`; el `open_basedir` predeterminado de Plesk ya incluye la carpeta de la suscripción |
 | "Token de seguridad inválido" | Sesión expirada | Recargue la página e inicie sesión de nuevo |

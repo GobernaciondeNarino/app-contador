@@ -4,7 +4,7 @@
  */
 declare(strict_types=1);
 
-const APP_VERSION = '1.0.1';
+const APP_VERSION = '1.1.0';
 const SETUP_TOKEN_MIN = 16;
 const ASSET_ID_PATTERN = '/^[a-f0-9]{32}\.(png|jpg|webp|gif|svg)$/';
 const ASSET_REF_PATTERN = '/^api\.php\?action=asset&id=([a-f0-9]{32}\.(?:png|jpg|webp|gif|svg))$/';
@@ -360,5 +360,54 @@ function enforce_rate(string $bucket, int $max, int $window): void
     if ($wait > 0) {
         header('Retry-After: ' . $wait);
         fail(429, 'too_many_requests', 'Demasiados intentos. Espere ' . (int) ceil($wait / 60) . ' minuto(s).');
+    }
+}
+
+/* ---------- instalación ---------- */
+
+const SETUP_TOKEN_FILE = 'setup-token.php';
+const INSTALL_PROBE_FILE = 'install-probe.txt';
+
+/**
+ * Token de instalación vigente y su origen. Si config.php define un setup_token válido (16+), se usa ese.
+ * Si no, se genera uno aleatorio en storage/setup-token.php: el instalador lo lee desde el Administrador
+ * de archivos de Plesk (como el "initialAdminPassword" de otros sistemas). Es un .php que responde 404 si
+ * alguien lo pide por web, además de estar en una carpeta bloqueada.
+ *
+ * @return array{0: string, 1: string} [token, origen 'config'|'file'|'none']
+ */
+function setup_token_info(bool $create = true): array
+{
+    $configured = (string) app_config()['setup_token'];
+    if (strlen($configured) >= SETUP_TOKEN_MIN) {
+        return [$configured, 'config'];
+    }
+    $file = storage_path(SETUP_TOKEN_FILE);
+    if (is_file($file) && preg_match('/TOKEN:\s*([a-f0-9]{32,})/', (string) file_get_contents($file), $m)) {
+        return [$m[1], 'file'];
+    }
+    if (!$create || !is_writable(storage_path())) {
+        return ['', 'none'];
+    }
+    $token = bin2hex(random_bytes(20));
+    $body = "<?php http_response_code(404); exit; ?>\n"
+        . "Token de instalación del Contador de exposiciones.\n"
+        . "Cópielo en el asistente de instalación. Se borra solo al crear la contraseña.\n"
+        . "TOKEN: " . $token . "\n";
+    if (@file_put_contents($file, $body, LOCK_EX) === false) {
+        return ['', 'none'];
+    }
+    @chmod($file, 0640);
+    return [$token, 'file'];
+}
+
+/** Borra los archivos temporales de la instalación (token y prueba de exposición). */
+function cleanup_install_files(): void
+{
+    foreach ([SETUP_TOKEN_FILE, INSTALL_PROBE_FILE] as $name) {
+        $file = storage_path($name);
+        if (is_file($file)) {
+            @unlink($file);
+        }
     }
 }

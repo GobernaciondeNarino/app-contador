@@ -5,7 +5,8 @@
  *   GET  api.php?action=state     estado público (configuración + turnos, sin secretos)
  *   GET  api.php?action=session   estado de la sesión y token CSRF
  *   GET  api.php?action=asset&id= imagen subida (logo o fondo)
- *   POST api.php?action=setup     crea la contraseña inicial (requiere setup_token)
+ *   GET  api.php?action=install_check requisitos del servidor (solo antes de instalar o con sesión)
+ *   POST api.php?action=setup     crea la contraseña inicial (requiere el token de instalación)
  *   POST api.php?action=login     inicia sesión
  *   POST api.php?action=logout    cierra sesión                         [admin]
  *   POST api.php?action=save      guarda configuración y turnos         [admin]
@@ -27,6 +28,7 @@ $routes = [
     'state' => ['GET', 'action_state'],
     'session' => ['GET', 'action_session'],
     'asset' => ['GET', 'action_asset'],
+    'install_check' => ['GET', 'action_install_check'],
     'setup' => ['POST', 'action_setup'],
     'login' => ['POST', 'action_login'],
     'logout' => ['POST', 'action_logout'],
@@ -63,28 +65,72 @@ function admin_exists(): bool
     return is_array($auth) && !empty($auth['hash']);
 }
 
-/** Motivo por el que no se puede crear la contraseña desde el navegador (solo mientras no exista). */
-function setup_issue(): ?string
-{
-    $len = strlen((string) app_config()['setup_token']);
-    if ($len === 0) {
-        return 'token_missing';
-    }
-    return $len < SETUP_TOKEN_MIN ? 'token_short' : null;
-}
-
 function session_payload(): array
 {
     $auth = is_authenticated();
     $setupRequired = !admin_exists();
+    $source = $setupRequired ? setup_token_info()[1] : null;
     return [
         'authenticated' => $auth,
         'setupRequired' => $setupRequired,
-        'setupEnabled' => $setupRequired && setup_issue() === null,
-        'setupIssue' => $setupRequired ? setup_issue() : null,
+        'setupEnabled' => $setupRequired && $source !== 'none',
+        // Dónde está el token de instalación: config/config.php o storage/setup-token.php.
+        'tokenSource' => $source,
         'setupTokenMin' => SETUP_TOKEN_MIN,
         'csrf' => $auth ? csrf_token() : null,
     ];
+}
+
+/**
+ * Verificación de requisitos para el asistente. Solo responde mientras no hay administrador o con
+ * sesión de administrador, para no describir el servidor a cualquier visitante.
+ */
+function action_install_check(): void
+{
+    if (admin_exists() && !is_authenticated()) {
+        fail(403, 'forbidden', 'La verificación solo está disponible durante la instalación o con sesión de administrador.');
+    }
+    $checks = [];
+    $add = static function (string $id, string $label, string $status, string $detail) use (&$checks) {
+        $checks[] = ['id' => $id, 'label' => $label, 'status' => $status, 'detail' => $detail];
+    };
+
+    $add('php', 'Versión de PHP', version_compare(PHP_VERSION, '7.4.0', '>=') ? 'ok' : 'error', 'PHP ' . PHP_VERSION . ' (mínimo 7.4)');
+    foreach (['json', 'session', 'mbstring', 'fileinfo'] as $ext) {
+        $add('ext-' . $ext, 'Extensión ' . $ext, extension_loaded($ext) ? 'ok' : 'error',
+            extension_loaded($ext) ? 'Disponible' : 'Actívela en Plesk → Configuración de PHP');
+    }
+    $add('ext-curl', 'Extensión curl (voz ElevenLabs)', function_exists('curl_init') ? 'ok' : 'warn',
+        function_exists('curl_init') ? 'Disponible' : 'Sin curl solo funciona la voz del navegador');
+
+    $writable = is_writable(storage_path()) && is_writable(storage_path('uploads')) && is_writable(storage_path('sessions'));
+    $add('storage', 'Carpeta de datos escribible', $writable ? 'ok' : 'error',
+        $writable ? 'storage/ y sus subcarpetas tienen permisos de escritura' : 'Dé permisos de escritura (750) a storage/, storage/uploads y storage/sessions');
+
+    $configFile = getenv('CONTADOR_CONFIG') ?: dirname(__DIR__) . '/config/config.php';
+    $add('config', 'Archivo de configuración', is_file($configFile) ? 'ok' : 'warn',
+        is_file($configFile) ? 'config/config.php encontrado' : 'No existe config/config.php: se usan los valores por defecto');
+
+    $add('https', 'Conexión segura (HTTPS)', is_https() ? 'ok' : 'warn',
+        is_https() ? 'La sesión se protege con cookies Secure' : 'Active SSL/TLS y la redirección a HTTPS en Plesk');
+
+    $limit = static function (string $v): int {
+        $v = trim($v);
+        $n = (int) $v;
+        $unit = strtolower(substr($v, -1));
+        return $unit === 'g' ? $n * 1073741824 : ($unit === 'm' ? $n * 1048576 : ($unit === 'k' ? $n * 1024 : $n));
+    };
+    $phpMax = min($limit((string) ini_get('upload_max_filesize')), $limit((string) ini_get('post_max_size')));
+    $want = (int) app_config()['max_upload_mb'] * 1048576;
+    $add('upload', 'Tamaño de subida de imágenes', $phpMax >= $want ? 'ok' : 'warn',
+        $phpMax >= $want ? 'Hasta ' . (int) app_config()['max_upload_mb'] . ' MB'
+            : 'PHP permite ' . round($phpMax / 1048576, 1) . ' MB; suba upload_max_filesize y post_max_size');
+
+    // Archivo de prueba: el navegador intenta descargarlo; si lo consigue, storage/ está expuesta.
+    $probe = bin2hex(random_bytes(16));
+    @file_put_contents(storage_path(INSTALL_PROBE_FILE), $probe);
+
+    json_response(['ok' => true, 'version' => APP_VERSION, 'checks' => $checks, 'probe' => $probe]);
 }
 
 function action_state(): void
@@ -119,17 +165,22 @@ function action_setup(): void
     $bucket = 'setup:' . client_ip();
     enforce_rate($bucket, 5, 900);
     $body = request_json(4096);
-    $token = (string) app_config()['setup_token'];
-    $sent = is_string($body['token'] ?? null) ? $body['token'] : '';
+    $sent = is_string($body['token'] ?? null) ? trim($body['token']) : '';
     $password = is_string($body['password'] ?? null) ? $body['password'] : '';
 
-    if (setup_issue() !== null) {
-        fail(403, 'setup_disabled', 'Defina setup_token (' . SETUP_TOKEN_MIN . '+ caracteres) en config/config.php para habilitar la configuración inicial.');
+    if (admin_exists()) {
+        fail(409, 'already_configured', 'Ya existe una contraseña de administrador.');
+    }
+    [$token, $source] = setup_token_info();
+    if ($source === 'none') {
+        fail(403, 'setup_disabled', 'No se pudo generar el token de instalación: revise los permisos de storage/ o ejecute bin/set-password.php.');
     }
     if (!hash_equals($token, $sent)) {
         rate_hit($bucket, 900);
         usleep(random_int(200000, 400000));
-        fail(403, 'invalid_token', 'El token de configuración no es correcto.');
+        fail(403, 'invalid_token', $source === 'config'
+            ? 'El token no coincide con el setup_token de config/config.php.'
+            : 'El token no coincide con el de storage/setup-token.php.');
     }
     if (mb_strlen($password, 'UTF-8') < 12 || strlen($password) > 256) {
         fail(422, 'weak_password', 'La contraseña debe tener entre 12 y 256 caracteres.');
@@ -139,6 +190,7 @@ function action_setup(): void
             fail(409, 'already_configured', 'Ya existe una contraseña de administrador.');
         }
         write_json('auth.json', ['hash' => password_hash($password, PASSWORD_DEFAULT), 'updatedAt' => gmdate('c')]);
+        cleanup_install_files();
     });
     open_session(true);
     session_regenerate_id(true);
@@ -224,6 +276,7 @@ function action_save(): void
             write_json('secrets.json', ['elKey' => $elKey]);
         }
         cleanup_uploads(referenced_assets($record));
+        cleanup_install_files();
         return $record;
     });
 

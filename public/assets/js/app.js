@@ -51,7 +51,7 @@
     turns: defaultTurns(),
     idx: 0, running: false, rem: 300, remaining: 300, total: 300,
     menuOpen: false, tab: 'general', dirty: false, pendingKey: null,
-    server: { available: false, authenticated: false, setupRequired: false, setupEnabled: false, setupIssue: null, setupTokenMin: 16, csrf: null, rev: 0, keySet: false, keyLocked: false, uploadMb: 4, svg: true }
+    server: { available: false, authenticated: false, setupRequired: false, setupEnabled: false, tokenSource: null, setupTokenMin: 16, hasState: false, csrf: null, rev: 0, keySet: false, keyLocked: false, uploadMb: 4, svg: true }
   };
 
   var reduceMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
@@ -627,13 +627,11 @@
   function renderAccess() {
     var srv = S.server, intro = $('access-intro');
     $('login-form').hidden = !(srv.available && !srv.authenticated && !srv.setupRequired);
-    $('setup-form').hidden = !(srv.available && srv.setupRequired && srv.setupEnabled);
+    $('open-wizard').hidden = !(srv.available && srv.setupRequired && !srv.authenticated);
     $('logged-box').hidden = !(srv.available && srv.authenticated);
     if (!srv.available) intro.textContent = 'No se detectó el servidor (api.php). Los cambios se guardan solo en este navegador.';
     else if (srv.authenticated) intro.textContent = 'Sesión de administrador activa. Puede guardar cambios en el servidor.';
-    else if (srv.setupRequired && srv.setupEnabled) intro.textContent = 'Primer uso: cree la contraseña de administrador con el token definido en config/config.php.';
-    else if (srv.setupRequired && srv.setupIssue === 'token_short') intro.textContent = 'El setup_token de config/config.php es demasiado corto: debe tener al menos ' + srv.setupTokenMin + ' caracteres. Alárguelo, recargue esta página y cree la contraseña aquí (o ejecute bin/set-password.php).';
-    else if (srv.setupRequired) intro.textContent = 'Falta crear la contraseña de administrador. Defina setup_token (' + srv.setupTokenMin + ' caracteres o más) en config/config.php y recargue la página, o ejecute bin/set-password.php.';
+    else if (srv.setupRequired) intro.textContent = 'El sistema aún no está instalado. El asistente verifica el servidor, crea la contraseña de administrador y guarda la configuración inicial.';
     else intro.textContent = 'Inicie sesión para guardar los cambios en el servidor. Sin sesión, los cambios se aplican solo en esta pantalla.';
   }
 
@@ -731,7 +729,7 @@
     S.server.authenticated = !!data.authenticated;
     S.server.setupRequired = !!data.setupRequired;
     S.server.setupEnabled = !!data.setupEnabled;
-    S.server.setupIssue = data.setupIssue || null;
+    S.server.tokenSource = data.tokenSource || null;
     S.server.setupTokenMin = data.setupTokenMin || 16;
     S.server.csrf = data.csrf || null;
   }
@@ -739,6 +737,7 @@
   function loadInitial() {
     return api('state').then(function (data) {
       S.server.available = true;
+      S.server.hasState = !!data.state;
       applyMeta(data);
       applyRemoteState(data.state);
       return api('session').then(applySession).catch(function () {});
@@ -752,7 +751,33 @@
       loadTurn(Math.min(S.idx, Math.max(0, S.turns.length - 1)), false);
       flash = 0;
       renderAll();
+      if (needsWizard()) wizard.open({ start: 'check' });
     });
+  }
+
+  /* ---------------- asistente de instalación ---------------- */
+
+  var wizard = { open: function () {}, isOpen: function () { return false; } };
+
+  /** El asistente se abre solo al iniciar si falta el administrador o la configuración inicial. */
+  function needsWizard() {
+    if (!S.server.available || !window.ContadorWizard) return false;
+    if (!S.server.setupRequired && S.server.hasState) return false;
+    try { if (window.sessionStorage.getItem('contador-wizard-omitido') === '1') return false; } catch (e) { /* sin almacenamiento */ }
+    return true;
+  }
+
+  function setAppInert(on) {
+    el.app.inert = on;
+    if (on) el.app.setAttribute('aria-hidden', 'true'); else el.app.removeAttribute('aria-hidden');
+  }
+
+  function openWizardFromMenu(start) {
+    S.menuOpen = false;
+    el.overlay.hidden = true;
+    el.menuBtn.setAttribute('aria-expanded', 'false');
+    lastFocus = null;
+    wizard.open({ start: start });
   }
 
   function save() {
@@ -929,19 +954,8 @@
         el.saveBtn.focus();
       }).catch(function (err) { accessMsg.textContent = err.message; pass.focus(); });
     });
-    $('setup-form').addEventListener('submit', function (e) {
-      e.preventDefault();
-      var token = $('f-token'), p1 = $('f-newpass'), p2 = $('f-newpass2');
-      accessMsg.textContent = '';
-      if (p1.value.length < 12) { accessMsg.textContent = 'La contraseña debe tener al menos 12 caracteres.'; p1.focus(); return; }
-      if (p1.value !== p2.value) { accessMsg.textContent = 'Las contraseñas no coinciden.'; p2.focus(); return; }
-      api('setup', { method: 'POST', json: { token: token.value, password: p1.value } }).then(function (data) {
-        token.value = p1.value = p2.value = '';
-        applySession(data); renderPanel();
-        announce('Contraseña creada y sesión iniciada.');
-        el.saveBtn.focus();
-      }).catch(function (err) { accessMsg.textContent = err.message; });
-    });
+    $('open-wizard').addEventListener('click', function () { openWizardFromMenu('check'); });
+    $('rerun-wizard').addEventListener('click', function () { openWizardFromMenu('event'); });
     $('logout-btn').addEventListener('click', function () {
       api('logout', { method: 'POST' }).catch(function () {}).then(function () {
         S.server.authenticated = false; S.server.csrf = null; renderPanel();
@@ -969,6 +983,13 @@
     el.panel = $('settings'); el.turnList = $('turn-list'); el.colorList = $('color-list');
     el.saveBtn = $('save-btn'); el.saveStatus = $('save-status');
 
+    if (window.ContadorWizard) {
+      wizard = window.ContadorWizard.create({
+        S: S, api: api, announce: announce, clamp: clamp, isHex: isHex, safeImageSrc: safeImageSrc,
+        applySession: applySession, applyMeta: applyMeta, applyRemoteState: applyRemoteState,
+        loadTurn: loadTurn, renderAll: renderAll, setAppInert: setAppInert
+      });
+    }
     bind();
     renderAll();
     initCanvas();

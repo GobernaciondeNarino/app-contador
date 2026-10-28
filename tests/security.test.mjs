@@ -291,38 +291,84 @@ describe('API: límite de intentos (fuerza bruta)', () => {
   });
 });
 
-describe('API: configuración web deshabilitada', () => {
-  test('sin setup_token no se puede crear la contraseña desde el navegador', async () => {
+describe('API: asistente de instalación', () => {
+  const tokenFrom = (storage) => {
+    const m = readFileSync(join(storage, 'setup-token.php'), 'utf8').match(/TOKEN:\s*([a-f0-9]+)/);
+    return m && m[1];
+  };
+
+  test('sin setup_token en config se genera un token en storage/setup-token.php y sirve para instalar', async () => {
     const srv = await startServer({ setup_token: '' });
     try {
       const c = new Client(srv.url);
       const s = await c.req('session');
       assert.equal(s.data.setupRequired, true);
-      assert.equal(s.data.setupEnabled, false);
-      assert.equal(s.data.setupIssue, 'token_missing');
+      assert.equal(s.data.setupEnabled, true);
+      assert.equal(s.data.tokenSource, 'file');
+      const raw = readFileSync(join(srv.storage, 'setup-token.php'), 'utf8');
+      assert.match(raw, /^<\?php http_response_code\(404\); exit; \?>/, 'el archivo responde 404 si se ejecuta por web');
+      const token = tokenFrom(srv.storage);
+      assert.match(token, /^[a-f0-9]{40}$/);
+      assert.equal((await c.req('session')).data.tokenSource, 'file');
+      assert.equal(tokenFrom(srv.storage), token, 'el token no cambia entre visitas');
       assert.equal((await c.setup(ADMIN_PASSWORD, '')).status, 403);
+      assert.equal((await c.setup(ADMIN_PASSWORD, 'a'.repeat(40))).status, 403);
+      assert.equal((await c.setup(ADMIN_PASSWORD, token)).status, 200);
+      assert.equal(existsSync(join(srv.storage, 'setup-token.php')), false, 'el token se borra al instalar');
     } finally { await srv.stop(); }
   });
 
-  test('con setup_token corto se informa el motivo y no se permite crear la contraseña', async () => {
+  test('con setup_token corto (menos de 16) se usa el token generado, no el de config', async () => {
     const srv = await startServer({ setup_token: 'Corto$26#abc' });
     try {
       const c = new Client(srv.url);
       const s = await c.req('session');
-      assert.equal(s.data.setupEnabled, false);
-      assert.equal(s.data.setupIssue, 'token_short');
-      assert.equal(s.data.setupTokenMin, 16);
+      assert.equal(s.data.setupEnabled, true);
+      assert.equal(s.data.tokenSource, 'file');
       assert.equal((await c.setup(ADMIN_PASSWORD, 'Corto$26#abc')).status, 403);
+      assert.equal((await c.setup(ADMIN_PASSWORD, tokenFrom(srv.storage))).status, 200);
     } finally { await srv.stop(); }
   });
 
-  test('una vez creada la contraseña no se revela el estado del token', async () => {
+  test('con setup_token válido en config no se crea archivo de token', async () => {
+    const srv = await startServer();
+    try {
+      const s = await new Client(srv.url).req('session');
+      assert.equal(s.data.tokenSource, 'config');
+      assert.equal(existsSync(join(srv.storage, 'setup-token.php')), false);
+    } finally { await srv.stop(); }
+  });
+
+  test('install_check: público antes de instalar, 403 después sin sesión, 200 con sesión', async () => {
+    const srv = await startServer();
+    try {
+      const anon = new Client(srv.url);
+      const r = await anon.req('install_check');
+      assert.equal(r.status, 200);
+      const ids = r.data.checks.map((c) => c.id);
+      for (const id of ['php', 'ext-json', 'ext-mbstring', 'ext-fileinfo', 'storage', 'https', 'upload']) assert.ok(ids.includes(id), id);
+      assert.ok(r.data.checks.every((c) => ['ok', 'warn', 'error'].includes(c.status)));
+      assert.match(r.data.probe, /^[a-f0-9]{32}$/);
+      assert.equal(readFileSync(join(srv.storage, 'install-probe.txt'), 'utf8'), r.data.probe);
+      const admin = new Client(srv.url);
+      await admin.setup();
+      assert.equal(existsSync(join(srv.storage, 'install-probe.txt')), false, 'la prueba se borra al instalar');
+      assert.equal((await new Client(srv.url).req('install_check')).status, 403);
+      assert.equal((await admin.req('install_check')).status, 200);
+      assert.equal((await admin.req('save', { method: 'POST', json: validState() })).status, 200);
+      assert.equal(existsSync(join(srv.storage, 'install-probe.txt')), false);
+    } finally { await srv.stop(); }
+  });
+
+  test('después de instalar, setup responde 409 sin revelar ni aceptar tokens', async () => {
     const srv = await startServer();
     try {
       await new Client(srv.url).setup();
-      const s = await new Client(srv.url).req('session');
+      const c = new Client(srv.url);
+      const s = await c.req('session');
       assert.equal(s.data.setupRequired, false);
-      assert.equal(s.data.setupIssue, null);
+      assert.equal(s.data.tokenSource, null);
+      assert.equal((await c.setup()).status, 409);
     } finally { await srv.stop(); }
   });
 });

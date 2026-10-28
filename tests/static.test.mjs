@@ -7,10 +7,10 @@ import { join } from 'node:path';
 import { ROOT } from './helpers.mjs';
 
 const read = (p) => readFileSync(join(ROOT, p), 'utf8');
-const js = read('public/assets/js/app.js');
+const js = read('public/assets/js/app.js') + read('public/assets/js/wizard.js');
 const html = read('public/index.html');
 
-test('app.js no usa sumideros de XSS ni evaluación dinámica', () => {
+test('app.js y wizard.js no usan sumideros de XSS ni evaluación dinámica', () => {
   for (const pattern of [/\.innerHTML\s*=/, /\.outerHTML\s*=/, /insertAdjacentHTML/, /document\.write/, /\beval\s*\(/, /new Function\s*\(/, /setTimeout\(\s*['"]/, /setInterval\(\s*['"]/]) {
     assert.ok(!pattern.test(js), `patrón no permitido: ${pattern}`);
   }

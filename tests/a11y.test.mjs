@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { readFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { startServer, Client, validState, ROOT } from './helpers.mjs';
+import { startServer, Client, validState, ROOT, SETUP_TOKEN, ADMIN_PASSWORD } from './helpers.mjs';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
@@ -47,11 +47,6 @@ describe('Accesibilidad', () => {
   after(async () => {
     await browser?.close();
     await srv?.stop();
-    mkdirSync(REPORTS, { recursive: true });
-    const lines = ['# Resultado axe-core', '', `Etiquetas: ${TAGS.join(', ')}`, '', '| Vista | Violaciones | Revisión manual (incomplete) |', '|---|---|---|'];
-    for (const r of results) lines.push(`| ${r.label} | ${r.violations} | ${r.incomplete} |`);
-    for (const r of results.filter((x) => x.details.length)) lines.push('', `## ${r.label}`, ...r.details.map((d) => `- ${d}`));
-    require('node:fs').writeFileSync(join(REPORTS, 'axe-resultados.md'), lines.join('\n') + '\n');
   });
 
   async function open(opts = {}) {
@@ -220,4 +215,160 @@ describe('Accesibilidad', () => {
     ];
     for (const [name, fg, bg, min] of checks) assert.ok(ratio(fg, bg) >= min, `${name}: ${ratio(fg, bg).toFixed(2)} < ${min}`);
   });
+});
+
+describe('Asistente de instalación', () => {
+  let wsrv, wbrowser;
+  before(async () => { wsrv = await startServer(); wbrowser = await chromium.launch(); });
+  after(async () => { await wbrowser?.close(); await wsrv?.stop(); });
+
+  async function openFresh(opts = {}) {
+    const ctx = await wbrowser.newContext({ viewport: { width: 1280, height: 860 }, ...opts });
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await page.goto(wsrv.url + '/', { waitUntil: 'networkidle' });
+    await page.waitForSelector('#wizard:not([hidden])');
+    await page.waitForFunction(() => !document.getElementById('wz-next').disabled);
+    return { page, ctx, errors };
+  }
+  const active = (page) => page.evaluate(() => document.activeElement.id);
+
+  test('se abre al iniciar sin instalar; el contador queda inerte y se puede omitir', async () => {
+    const { page, ctx } = await openFresh();
+    assert.equal(await page.getAttribute('#wz-form', 'role'), 'dialog');
+    assert.equal(await page.getAttribute('#wz-form', 'aria-modal'), 'true');
+    assert.equal(await page.evaluate(() => document.getElementById('app').inert), true);
+    assert.equal(await active(page), 'wz-title', 'el foco inicia en el título del paso');
+    assert.equal(await page.getAttribute('#wz-step-check', 'aria-current'), 'step');
+    await page.click('#wz-skip');
+    assert.equal(await page.isHidden('#wizard'), true);
+    assert.equal(await page.evaluate(() => document.getElementById('app').inert), false);
+    assert.equal(await active(page), 'toggle-btn');
+    await page.waitForFunction(() => /omitido/.test(document.getElementById('announcer').textContent));
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForTimeout(300);
+    assert.equal(await page.isHidden('#wizard'), true, 'omitido no reaparece en la misma sesión del navegador');
+    await page.click('#menu-btn'); await page.click('#tab-access');
+    assert.equal(await page.isVisible('#open-wizard'), true, 'se puede reabrir desde Acceso');
+    await page.click('#open-wizard');
+    assert.equal(await page.isVisible('#wizard'), true);
+    await ctx.close();
+  });
+
+  test('recorrido completo con teclado, validación accesible y axe en cada paso', async () => {
+    const { page, ctx, errors } = await openFresh();
+    await axe(page, 'Asistente · 1 Servidor');
+    assert.equal(await page.locator('.wz-check[data-status="error"]').count(), 0);
+
+    await page.focus('#wz-next');
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('[data-step="admin"]:not([hidden])');
+    assert.equal(await active(page), 'wz-title');
+    await axe(page, 'Asistente · 2 Administrador');
+    await page.click('#wz-next');
+    assert.match(await page.textContent('#wz-error'), /token/i);
+    assert.equal(await page.getAttribute('#wz-token', 'aria-invalid'), 'true');
+    assert.match(await page.getAttribute('#wz-token', 'aria-describedby'), /wz-error/);
+    assert.equal(await active(page), 'wz-token', 'el foco va al campo con error');
+    await page.fill('#wz-token', SETUP_TOKEN);
+    await page.fill('#wz-pass1', ADMIN_PASSWORD);
+    await page.fill('#wz-pass2', ADMIN_PASSWORD + 'x');
+    await page.keyboard.press('Enter');  // Enter dentro de un campo envía el paso
+    assert.match(await page.textContent('#wz-error'), /no coinciden/);
+    assert.equal(await active(page), 'wz-pass2');
+    await page.fill('#wz-pass2', ADMIN_PASSWORD);
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('[data-step="event"]:not([hidden])');
+    assert.equal(await page.getAttribute('#wz-token', 'aria-invalid'), null, 'los errores se limpian al avanzar');
+
+    await axe(page, 'Asistente · 3 Evento');
+    await page.fill('#wz-title-in', 'Foro Departamental TIC');
+    await page.fill('#wz-sub-in', 'Pasto · 28 de octubre de 2026');
+    await page.click('#wz-next');
+
+    await page.waitForSelector('[data-step="times"]:not([hidden])');
+    await axe(page, 'Asistente · 4 Tiempos');
+    await page.fill('#wz-yel', '50'); await page.fill('#wz-red', '60');
+    await page.click('#wz-next');
+    assert.equal(await active(page), 'wz-yel');
+    await page.fill('#wz-yel', '120');
+    await page.click('#wz-next');
+
+    await page.waitForSelector('[data-step="turns"]:not([hidden])');
+    await page.click('#wz-next');
+    assert.equal(await active(page), 'wz-t-name-0', 'exige al menos un ponente');
+    await page.fill('#wz-t-name-0', 'Ana Pérez');
+    await page.fill('#wz-t-prof-0', 'Ingeniera de sistemas');
+    await page.click('#wz-add-turn');
+    assert.equal(await active(page), 'wz-t-name-1', 'el foco va al nuevo ponente');
+    await page.keyboard.type('Luis Gómez');
+    await axe(page, 'Asistente · 5 Ponentes');
+    await page.click('#wz-next');
+
+    await page.waitForSelector('[data-step="voice"]:not([hidden])');
+    await axe(page, 'Asistente · 6 Voz');
+    await page.click('#wz-next');
+
+    await page.waitForSelector('[data-step="summary"]:not([hidden])');
+    await axe(page, 'Asistente · 7 Resumen');
+    assert.match(await page.textContent('#wz-summary'), /Ana Pérez · Ingeniera de sistemas/);
+    assert.equal(await page.textContent('#wz-next'), 'Guardar y abrir el contador');
+
+    // Atrás conserva lo escrito
+    await page.click('#wz-back'); await page.click('#wz-back');
+    assert.equal(await page.inputValue('#wz-t-name-1'), 'Luis Gómez');
+    await page.click('#wz-next'); await page.click('#wz-next');
+
+    await page.click('#wz-next');
+    await page.waitForSelector('#wizard', { state: 'hidden' });
+    assert.equal(await page.textContent('#title'), 'Foro Departamental TIC');
+    assert.equal(await page.textContent('#speaker-name'), 'Ana Pérez');
+    assert.equal(await active(page), 'toggle-btn');
+    await page.waitForFunction(() => /Instalación completada/.test(document.getElementById('announcer').textContent));
+    const saved = JSON.parse(readFileSync(join(wsrv.storage, 'state.json'), 'utf8'));
+    assert.equal(saved.turns.length, 2);
+    assert.equal(saved.cfg.subtitle, 'Pasto · 28 de octubre de 2026');
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
+  test('ya instalado, no se abre al iniciar y se puede reabrir desde Acceso con sesión', async () => {
+    const ctx = await wbrowser.newContext({ viewport: { width: 1280, height: 860 } });
+    const page = await ctx.newPage();
+    await page.goto(wsrv.url + '/', { waitUntil: 'networkidle' });
+    await page.waitForTimeout(300);
+    assert.equal(await page.isHidden('#wizard'), true);
+    await page.click('#menu-btn'); await page.click('#tab-access');
+    await page.fill('#f-pass', ADMIN_PASSWORD); await page.keyboard.press('Enter');
+    await page.waitForSelector('#rerun-wizard:visible');
+    await page.click('#rerun-wizard');
+    await page.waitForSelector('[data-step="event"]:not([hidden])');
+    assert.equal(await page.inputValue('#wz-title-in'), 'Foro Departamental TIC', 'precarga la configuración guardada');
+    await page.click('#wz-skip');
+    assert.equal(await page.isHidden('#wizard'), true);
+    await ctx.close();
+  });
+
+  test('reflujo del asistente a 320 px sin desplazamiento horizontal', async () => {
+    const fresh = await startServer();
+    const ctx = await wbrowser.newContext({ viewport: { width: 320, height: 640 } });
+    try {
+      const page = await ctx.newPage();
+      await page.goto(fresh.url + '/', { waitUntil: 'networkidle' });
+      await page.waitForSelector('#wizard:not([hidden])');
+      await page.waitForFunction(() => !document.getElementById('wz-next').disabled);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      assert.ok(overflow <= 0, `desplazamiento horizontal de ${overflow}px`);
+      await axe(page, 'Asistente · móvil 320 px');
+    } finally { await ctx.close(); await fresh.stop(); }
+  });
+});
+
+after(() => {
+  mkdirSync(REPORTS, { recursive: true });
+  const lines = ['# Resultado axe-core', '', `Etiquetas: ${TAGS.join(', ')}`, '', '| Vista | Violaciones | Revisión manual (incomplete) |', '|---|---|---|'];
+  for (const r of results) lines.push(`| ${r.label} | ${r.violations} | ${r.incomplete} |`);
+  for (const r of results.filter((x) => x.details.length)) lines.push('', `## ${r.label}`, ...r.details.map((d) => `- ${d}`));
+  require('node:fs').writeFileSync(join(REPORTS, 'axe-resultados.md'), lines.join('\n') + '\n');
 });

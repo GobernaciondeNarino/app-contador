@@ -10,8 +10,9 @@
 <title>Contador de exposiciones · Gobernación de Nariño</title>
 <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
 <link rel="preload" href="assets/fonts/hind-madurai-700-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/css/app.css?v=1.0.1">
-<script src="assets/js/app.js?v=1.0.1" defer></script>
+<link rel="stylesheet" href="assets/css/app.css?v=1.1.0">
+<script src="assets/js/wizard.js?v=1.1.0" defer></script>
+<script src="assets/js/app.js?v=1.1.0" defer></script>
 </head>
 <body>
 
@@ -250,24 +251,10 @@
           <button type="submit" class="btn-blue">Iniciar sesión</button>
         </form>
 
-        <form id="setup-form" class="stack-sm" hidden novalidate>
-          <div class="field">
-            <label for="f-token">Token de configuración (config.php)</label>
-            <input id="f-token" class="input" type="password" autocomplete="off" required>
-          </div>
-          <div class="field">
-            <label for="f-newpass">Nueva contraseña</label>
-            <input id="f-newpass" class="input" type="password" autocomplete="new-password" minlength="12" required aria-describedby="f-newpass-hint">
-            <span id="f-newpass-hint" class="hint">Mínimo 12 caracteres.</span>
-          </div>
-          <div class="field">
-            <label for="f-newpass2">Repetir contraseña</label>
-            <input id="f-newpass2" class="input" type="password" autocomplete="new-password" minlength="12" required>
-          </div>
-          <button type="submit" class="btn-blue">Crear contraseña</button>
-        </form>
+        <button type="button" id="open-wizard" class="btn-blue" hidden>Abrir asistente de instalación</button>
 
         <div id="logged-box" class="stack-sm" hidden>
+          <button type="button" id="rerun-wizard" class="btn-outline-blue">Abrir asistente de configuración</button>
           <button type="button" id="logout-btn" class="btn-plain">Cerrar sesión</button>
         </div>
 
@@ -280,6 +267,156 @@
       <button type="button" id="save-btn" class="btn-green">Guardar cambios</button>
     </div>
   </section>
+</div>
+
+<!-- Asistente de instalación y configuración (se muestra al iniciar si el sistema no está instalado) -->
+<div id="wizard" class="wizard" hidden>
+  <form id="wz-form" class="wz-card" role="dialog" aria-modal="true" aria-labelledby="wz-title" aria-describedby="wz-progress" novalidate>
+    <div class="wz-head">
+      <p class="wz-kicker">Asistente de instalación · Contador de exposiciones</p>
+      <h2 id="wz-title" tabindex="-1">Bienvenida</h2>
+      <p id="wz-progress" class="wz-progress">Paso 1 de 7</p>
+      <ol id="wz-steps" class="wz-steps" aria-label="Pasos del asistente"></ol>
+    </div>
+
+    <div class="wz-body">
+      <!-- 1. Verificación -->
+      <section class="wz-step stack" data-step="check" hidden>
+        <p class="note">Este asistente deja el contador listo en unos minutos: revisa el servidor, crea la cuenta de administrador y guarda los datos del evento, los tiempos, los ponentes y la voz.</p>
+        <h3>Verificación del servidor</h3>
+        <ul id="wz-checks" class="wz-checks" aria-live="polite"></ul>
+        <button type="button" id="wz-recheck" class="btn-plain">Volver a verificar</button>
+      </section>
+
+      <!-- 2. Administrador -->
+      <section class="wz-step stack" data-step="admin" hidden>
+        <div id="wz-setup" class="stack-sm">
+          <p class="note">Cree la contraseña de administrador. Con ella podrá guardar cambios, subir imágenes y usar la voz de ElevenLabs.</p>
+          <div class="wz-help" id="wz-token-help"></div>
+          <div class="field">
+            <label for="wz-token">Token de instalación</label>
+            <input id="wz-token" class="input" type="text" autocomplete="off" spellcheck="false" aria-describedby="wz-token-help">
+          </div>
+          <div class="field">
+            <label for="wz-pass1">Nueva contraseña</label>
+            <input id="wz-pass1" class="input" type="password" autocomplete="new-password" aria-describedby="wz-pass1-hint">
+            <span id="wz-pass1-hint" class="hint">Mínimo 12 caracteres. Use una frase larga que pueda recordar.</span>
+          </div>
+          <div class="field">
+            <label for="wz-pass2">Repetir contraseña</label>
+            <input id="wz-pass2" class="input" type="password" autocomplete="new-password">
+          </div>
+          <label class="check"><input type="checkbox" id="wz-showpass"> Mostrar contraseñas</label>
+        </div>
+        <div id="wz-login" class="stack-sm" hidden>
+          <p class="note">El administrador ya existe. Inicie sesión para continuar con la configuración.</p>
+          <div class="field">
+            <label for="wz-loginpass">Contraseña de administrador</label>
+            <input id="wz-loginpass" class="input" type="password" autocomplete="current-password">
+          </div>
+        </div>
+        <p id="wz-admin-done" class="note wz-ok" hidden>Sesión de administrador activa.</p>
+      </section>
+
+      <!-- 3. Evento -->
+      <section class="wz-step stack" data-step="event" hidden>
+        <div class="field">
+          <label for="wz-title-in">Nombre del evento <span class="req">(obligatorio)</span></label>
+          <input id="wz-title-in" class="input" type="text" maxlength="160" data-wz-cfg="title" required>
+        </div>
+        <div class="field">
+          <label for="wz-sub-in">Lugar y fecha</label>
+          <input id="wz-sub-in" class="input" type="text" maxlength="160" data-wz-cfg="subtitle" placeholder="Pasto · 28 de octubre de 2026">
+        </div>
+        <div class="field">
+          <label for="wz-foot-in">Texto inferior</label>
+          <input id="wz-foot-in" class="input" type="text" maxlength="160" data-wz-cfg="footer" placeholder="Gobernación de Nariño">
+        </div>
+        <div class="field">
+          <label for="wz-logo">Logo de la entidad (PNG, JPG, WEBP o SVG, opcional)</label>
+          <input id="wz-logo" class="file" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" aria-describedby="wz-logo-hint">
+          <span id="wz-logo-hint" class="hint"></span>
+        </div>
+        <div id="wz-logo-box" class="wz-logo-box" hidden>
+          <img id="wz-logo-img" alt="Vista previa del logo">
+          <button type="button" id="wz-logo-clear" class="btn-plain">Quitar logo</button>
+        </div>
+        <div class="row-between">
+          <label for="wz-bg">Color de fondo</label>
+          <input id="wz-bg" type="color">
+        </div>
+      </section>
+
+      <!-- 4. Tiempos -->
+      <section class="wz-step stack" data-step="times" hidden>
+        <div class="grid-3">
+          <div class="field">
+            <label for="wz-min">Minutos por turno</label>
+            <input id="wz-min" class="input" type="number" inputmode="numeric" min="1" max="180" data-wz-num="minutes,1,180" aria-describedby="wz-min-hint">
+            <span id="wz-min-hint" class="hint">1 a 180</span>
+          </div>
+          <div class="field">
+            <label for="wz-yel">Amarillo desde (s)</label>
+            <input id="wz-yel" class="input" type="number" inputmode="numeric" min="10" max="10800" data-wz-num="yellowAt,10,10800" aria-describedby="wz-yel-hint">
+            <span id="wz-yel-hint" class="hint">Segundos restantes</span>
+          </div>
+          <div class="field">
+            <label for="wz-red">Rojo desde (s)</label>
+            <input id="wz-red" class="input" type="number" inputmode="numeric" min="5" max="10800" data-wz-num="redAt,5,10800" aria-describedby="wz-red-hint">
+            <span id="wz-red-hint" class="hint">Segundos restantes</span>
+          </div>
+        </div>
+        <p id="wz-times-example" class="note"></p>
+        <div class="field">
+          <label for="wz-fx">Efecto de la franja</label>
+          <select id="wz-fx" class="input">
+            <option value="text">En los números</option>
+            <option value="bg">En el fondo (el texto cambia de color al pasar la franja)</option>
+          </select>
+        </div>
+      </section>
+
+      <!-- 5. Ponentes -->
+      <section class="wz-step stack" data-step="turns" hidden>
+        <p class="note">Agregue los ponentes en el orden en que van a intervenir. Podrá cambiarlos después desde el menú.</p>
+        <ol id="wz-turns" class="turn-list"></ol>
+        <button type="button" id="wz-add-turn" class="btn-green">+ Agregar ponente</button>
+      </section>
+
+      <!-- 6. Sonido y voz -->
+      <section class="wz-step stack" data-step="voice" hidden>
+        <label class="check"><input type="checkbox" id="wz-sound"> Alerta sonora a 1 minuto y al terminar</label>
+        <label class="check"><input type="checkbox" id="wz-voice"> Anunciar por voz al ponente y el fin del tiempo</label>
+        <h3 class="h3-sm">ElevenLabs (opcional)</h3>
+        <p class="note">Sin estos datos se usa la voz del navegador.</p>
+        <div class="field">
+          <label for="wz-key">API key</label>
+          <input id="wz-key" class="input" type="password" autocomplete="off" spellcheck="false" aria-describedby="wz-key-hint">
+          <span id="wz-key-hint" class="hint"></span>
+        </div>
+        <div class="field">
+          <label for="wz-voice-id">ID de voz</label>
+          <input id="wz-voice-id" class="input" type="text" maxlength="64" spellcheck="false" placeholder="voice_id">
+        </div>
+      </section>
+
+      <!-- 7. Resumen -->
+      <section class="wz-step stack" data-step="summary" hidden>
+        <p class="note">Revise los datos. Al guardar, el contador queda listo con el primer ponente.</p>
+        <dl id="wz-summary" class="wz-summary"></dl>
+      </section>
+
+      <p id="wz-error" class="form-msg" role="alert"></p>
+    </div>
+
+    <div class="wz-foot">
+      <button type="button" id="wz-skip" class="btn-link">Omitir por ahora</button>
+      <div class="wz-nav">
+        <button type="button" id="wz-back" class="btn-plain">Atrás</button>
+        <button type="submit" id="wz-next" class="btn-green">Siguiente</button>
+      </div>
+    </div>
+  </form>
 </div>
 
 <noscript><p class="noscript">El contador necesita JavaScript activado.</p></noscript>

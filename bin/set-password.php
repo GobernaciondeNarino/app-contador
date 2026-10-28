@@ -33,5 +33,6 @@ if (mb_strlen($password, 'UTF-8') < 12) {
 
 with_lock(static function () use ($password) {
     write_json('auth.json', ['hash' => password_hash($password, PASSWORD_DEFAULT), 'updatedAt' => gmdate('c')]);
+    cleanup_install_files();
 });
 fwrite(STDOUT, "Contraseña guardada en " . storage_path('auth.json') . PHP_EOL);

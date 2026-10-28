@@ -1,7 +1,7 @@
 # Informe de pruebas de seguridad y accesibilidad
 
 **Aplicación:** Contador de exposiciones — Gobernación de Nariño
-**Versión evaluada:** 1.0.0 (rama `claude/dreamy-edison-c86vkv`)
+**Versión evaluada:** 1.1.0 (rama `claude/dreamy-edison-c86vkv`)
 **Fecha:** 27 de octubre de 2026
 **Alcance:** frontend (`public/index.html`, `assets/`), API PHP (`public/api.php`, `src/`), configuración de servidor para Plesk (`.htaccess`, `web.config`, `.user.ini`).
 **Marco de referencia:** OWASP Top 10 (2021) y OWASP ASVS 4.0 nivel 1; WCAG 2.1 y 2.2 nivel AA, exigido por la Resolución 1519 de 2020 de MinTIC (Anexo 1) para sitios de entidades públicas; NTC 5854.
@@ -12,13 +12,13 @@
 
 | Prueba | Herramienta | Resultado |
 |---|---|---|
-| Seguridad de la API (41 casos) | `node:test` contra un servidor PHP real con datos temporales | **41/41 aprobadas** |
+| Seguridad de la API (43 casos) | `node:test` contra un servidor PHP real con datos temporales | **43/43 aprobadas** |
 | Revisión estática y unitaria (8 casos) | `tests/static.test.mjs`, `tests/php/client-ip.php` | **8/8 aprobadas** |
 | Análisis estático (SAST) | Semgrep 127 reglas (`p/php`, `p/javascript`, `p/secrets`) | 3 avisos, **falsos positivos** verificados (ver 3.3) |
 | Dependencias | `npm audit` | 0 vulnerabilidades (en producción no hay dependencias de terceros) |
-| Accesibilidad automática | axe-core 4.10 (`wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, `wcag22aa`) en 8 vistas | **0 violaciones** |
-| Accesibilidad funcional (7 casos) | Playwright: teclado, foco, lector de pantalla, reflujo, movimiento reducido, contraste | **7/7 aprobadas** |
-| **Total** | `npm test` | **64/64 aprobadas** |
+| Accesibilidad automática | axe-core 4.10 (`wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, `wcag22aa`) en 16 vistas (incluye los 7 pasos del asistente) | **0 violaciones** |
+| Accesibilidad funcional (11 casos) | Playwright: teclado, foco, lector de pantalla, reflujo, movimiento reducido, contraste, asistente de instalación | **11/11 aprobadas** |
+| **Total** | `npm test` | **70/70 aprobadas** |
 
 Ejecutar: `npm install && npm test` (requiere PHP 7.4+, Node 20+ y Playwright con Chromium).
 
@@ -63,7 +63,7 @@ El archivo exportado (`design/Main.dc.html`) era una maqueta de una herramienta 
 
 ## 3. Pruebas de seguridad
 
-### 3.1 API (`tests/security.test.mjs`) — 41/41
+### 3.1 API (`tests/security.test.mjs`) — 43/43
 
 | Categoría OWASP | Casos verificados |
 |---|---|
@@ -77,9 +77,19 @@ El archivo exportado (`design/Main.dc.html`) era una maqueta de una herramienta 
 | A08 Integridad | Subidas con nombre aleatorio (sin usar el nombre original); escritura atómica de JSON |
 | A10 SSRF | El proxy de voz solo llama a `https://api.elevenlabs.io` (`CURLPROTO_HTTPS`), con el ID de voz validado (`[A-Za-z0-9_-]`) |
 
+### 3.1.1 Asistente de instalación
+
+| Riesgo | Control | Prueba |
+|---|---|---|
+| Secuestro de la instalación: el primero que abre el sitio crea la cuenta de administrador | La contraseña solo se crea con un **token de instalación** que únicamente puede leer quien administra el hosting: `setup_token` de `config.php` (16+ caracteres) o, si no existe, uno aleatorio de 160 bits en `storage/setup-token.php`. El archivo es un `.php` que responde 404 si se ejecuta por web y se borra al instalar | Token vacío, falso o el `setup_token` corto → 403; token del archivo → 200; archivo borrado después |
+| Fuerza bruta del token | 5 intentos por IP cada 15 min (429) | Ver «límite de intentos» |
+| Divulgación de la configuración del servidor | `install_check` solo responde antes de instalar o con sesión de administrador | Sin sesión tras instalar → 403 |
+| `storage/` expuesta por un despliegue incorrecto | El asistente escribe `storage/install-probe.txt` con un valor aleatorio, intenta descargarlo desde el navegador y bloquea la instalación si lo consigue. El archivo se borra al instalar y al guardar | Archivo creado con el valor devuelto y borrado al instalar y guardar |
+| Reinstalación | `setup` responde 409 una vez existe el administrador y ya no informa el origen del token | 409 |
+
 ### 3.2 Revisión estática (`tests/static.test.mjs`) — 8/8
 
-- `app.js` sin `innerHTML`, `outerHTML`, `insertAdjacentHTML`, `document.write`, `eval`, `new Function` ni temporizadores con cadenas.
+- `app.js` y `wizard.js` sin `innerHTML`, `outerHTML`, `insertAdjacentHTML`, `document.write`, `eval`, `new Function` ni temporizadores con cadenas.
 - `app.js` sin llamadas directas a terceros ni cabecera `xi-api-key`.
 - `index.html` sin scripts en línea, atributos `style`, bloques `<style>` ni manejadores `on*`: compatible con CSP sin `unsafe-inline` (comprobado también en navegador: la CSP bloqueó la inyección de un script en línea durante las pruebas).
 - Sin recursos de terceros (fuentes autoalojadas).
@@ -124,6 +134,16 @@ php.lang.security.injection.tainted-filename  public/api.php  (action_asset, 3 l
 | Configuración · Acceso | 0 | — |
 | Franja amarilla sobre el fondo | 0 | — |
 | Móvil 320 px | 0 | — |
+| Asistente · 1 Servidor | 0 | 9 nodos `color-contrast` |
+| Asistente · 2 Administrador | 0 | — |
+| Asistente · 3 Evento | 0 | — |
+| Asistente · 4 Tiempos | 0 | — |
+| Asistente · 5 Ponentes | 0 | 1 nodo `color-contrast` |
+| Asistente · 6 Voz | 0 | — |
+| Asistente · 7 Resumen | 0 | — |
+| Asistente · móvil 320 px | 0 | 10 nodos `color-contrast` |
+
+En el asistente, los nodos de revisión manual son los iconos ✓ ! ✕ de la verificación (decorativos, con `aria-hidden` y acompañados del texto «Correcto», «Advertencia» o «Error», en blanco sobre fondos de 5,5:1 a 7,5:1) y campos que quedan bajo el pie fijo al desplazarse. Cumplen.
 
 Los nodos de "revisión manual" son etiquetas del panel que, al momento del análisis, quedaban **debajo del pie fijo** del panel (fuera de la zona visible del desplazamiento), por lo que axe no pudo calcular el fondo. Se revisaron manualmente: son textos `#4A4A4A` o `#000000` sobre `#FFFFFF` (8,9:1 y 21:1). Cumplen.
 
@@ -139,6 +159,10 @@ El detalle de la última ejecución queda en `tests/reports/axe-resultados.md`.
 | `role=timer` con texto natural; anuncios "Contador en curso…" y "Turno 2 de 2…"; botón Siguiente deshabilitado y descrito en el último turno | 4.1.3, 4.1.2, 1.3.1 | Aprobada |
 | Ancho de 320 px (equivalente a 400 % de zoom) sin desplazamiento horizontal, con el panel abierto y cerrado | 1.4.10 | Aprobada |
 | Con *movimiento reducido* no hay destello al cambiar de turno | 2.3.3 | Aprobada |
+| Asistente: se abre al iniciar como diálogo modal (`aria-modal`, fondo `inert`), foco en el título de cada paso, `aria-current="step"`, se puede omitir y reabrir desde *Acceso* | 2.4.3, 4.1.2, 1.3.1 | Aprobada |
+| Asistente: errores en `role=alert`, campo con `aria-invalid` y `aria-describedby`, el foco va al campo con error; Enter dentro de un campo avanza; «Atrás» conserva lo escrito | 3.3.1, 3.3.3, 2.1.1 | Aprobada |
+| Asistente: recorrido completo con teclado hasta guardar; anuncio «Instalación completada» y foco en *Iniciar* | 2.1.1, 4.1.3 | Aprobada |
+| Asistente a 320 px sin desplazamiento horizontal | 1.4.10 | Aprobada |
 | Contraste de la paleta institucional por defecto (11 combinaciones) | 1.4.3, 1.4.11 | Aprobada |
 
 ### 4.3 Contraste de la paleta por defecto

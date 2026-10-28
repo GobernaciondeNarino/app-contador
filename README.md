@@ -3,6 +3,7 @@
 Contador de tiempo para ponencias y eventos, listo para producción en **Plesk**. Muestra el tiempo restante en grande con una franja amarilla y roja que avanza al acercarse el final, el nombre del ponente en turno y el siguiente, alertas sonoras y anuncios por voz (navegador o ElevenLabs).
 
 - **Frontend** estático sin dependencias (HTML + CSS + JavaScript), con la identidad visual de la Gobernación de Nariño: Hind Madurai, Nunito Sans y los colores `#10A13B`, `#FFD500`, `#003366` y `#4A4A4A`.
+- **Asistente de instalación** al iniciar por primera vez, en 7 pasos.
 - **Backend** PHP de un solo archivo (`public/api.php`) que guarda la configuración en **JSON** (sin base de datos).
 - Accesibilidad **WCAG 2.1 / 2.2 AA** (Resolución 1519 de 2020 de MinTIC) y controles de seguridad OWASP verificados con pruebas automáticas.
 
@@ -10,7 +11,7 @@ Contador de tiempo para ponencias y eventos, listo para producción en **Plesk**
 
 ```
 public/              Raíz web (document root en Plesk)
-  index.html         Pantalla del contador y panel de configuración
+  index.html         Pantalla del contador, panel de configuración y asistente
   api.php            API: estado, sesión, guardar, subir imágenes, voz
   assets/            CSS, JS, fuentes autoalojadas, favicon
   .htaccess          Cabeceras y reglas para Apache
@@ -28,11 +29,10 @@ design/              Maqueta original exportada (solo referencia, no se publica)
 ## Puesta en marcha local
 
 ```bash
-cp config/config.example.php config/config.php   # y defina setup_token
-npm run serve                                    # http://127.0.0.1:8080
+npm run serve        # http://127.0.0.1:8080
 ```
 
-Abra el menú ☰ → **Acceso** para crear la contraseña con el `setup_token`, o ejecute `php bin/set-password.php`.
+Al abrir la página aparece el **asistente de instalación**: verifica el servidor, crea la contraseña de administrador y guarda evento, tiempos, ponentes y voz. El token que pide está en `storage/setup-token.php` (o es el `setup_token` de `config/config.php`, si define uno de 16+ caracteres). También puede crear la contraseña con `php bin/set-password.php`.
 
 Sin PHP (abriendo `public/index.html` desde un servidor estático) el contador funciona en **modo local**: guarda en `localStorage` y usa la voz del navegador.
 
@@ -54,7 +54,7 @@ Ver **[docs/DESPLIEGUE-PLESK.md](docs/DESPLIEGUE-PLESK.md)**: requisitos, raíz 
 
 ```bash
 npm install     # axe-core
-npm test        # sintaxis + 64 pruebas (seguridad, estáticas, accesibilidad)
+npm test        # sintaxis + 70 pruebas (seguridad, estáticas, accesibilidad)
 npm run test:security
 npm run test:a11y
 ```
