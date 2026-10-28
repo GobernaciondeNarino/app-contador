@@ -299,7 +299,30 @@ describe('API: configuración web deshabilitada', () => {
       const s = await c.req('session');
       assert.equal(s.data.setupRequired, true);
       assert.equal(s.data.setupEnabled, false);
+      assert.equal(s.data.setupIssue, 'token_missing');
       assert.equal((await c.setup(ADMIN_PASSWORD, '')).status, 403);
+    } finally { await srv.stop(); }
+  });
+
+  test('con setup_token corto se informa el motivo y no se permite crear la contraseña', async () => {
+    const srv = await startServer({ setup_token: 'Corto$26#abc' });
+    try {
+      const c = new Client(srv.url);
+      const s = await c.req('session');
+      assert.equal(s.data.setupEnabled, false);
+      assert.equal(s.data.setupIssue, 'token_short');
+      assert.equal(s.data.setupTokenMin, 16);
+      assert.equal((await c.setup(ADMIN_PASSWORD, 'Corto$26#abc')).status, 403);
+    } finally { await srv.stop(); }
+  });
+
+  test('una vez creada la contraseña no se revela el estado del token', async () => {
+    const srv = await startServer();
+    try {
+      await new Client(srv.url).setup();
+      const s = await new Client(srv.url).req('session');
+      assert.equal(s.data.setupRequired, false);
+      assert.equal(s.data.setupIssue, null);
     } finally { await srv.stop(); }
   });
 });

@@ -54,7 +54,7 @@ Ver **[docs/DESPLIEGUE-PLESK.md](docs/DESPLIEGUE-PLESK.md)**: requisitos, raíz 
 
 ```bash
 npm install     # axe-core
-npm test        # sintaxis + 61 pruebas (seguridad, estáticas, accesibilidad)
+npm test        # sintaxis + 64 pruebas (seguridad, estáticas, accesibilidad)
 npm run test:security
 npm run test:a11y
 ```

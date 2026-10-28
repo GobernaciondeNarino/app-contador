@@ -51,7 +51,7 @@
     turns: defaultTurns(),
     idx: 0, running: false, rem: 300, remaining: 300, total: 300,
     menuOpen: false, tab: 'general', dirty: false, pendingKey: null,
-    server: { available: false, authenticated: false, setupRequired: false, setupEnabled: false, csrf: null, rev: 0, keySet: false, keyLocked: false, uploadMb: 4, svg: true }
+    server: { available: false, authenticated: false, setupRequired: false, setupEnabled: false, setupIssue: null, setupTokenMin: 16, csrf: null, rev: 0, keySet: false, keyLocked: false, uploadMb: 4, svg: true }
   };
 
   var reduceMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
@@ -632,7 +632,8 @@
     if (!srv.available) intro.textContent = 'No se detectó el servidor (api.php). Los cambios se guardan solo en este navegador.';
     else if (srv.authenticated) intro.textContent = 'Sesión de administrador activa. Puede guardar cambios en el servidor.';
     else if (srv.setupRequired && srv.setupEnabled) intro.textContent = 'Primer uso: cree la contraseña de administrador con el token definido en config/config.php.';
-    else if (srv.setupRequired) intro.textContent = 'Falta crear la contraseña de administrador. Defina setup_token en config/config.php o ejecute bin/set-password.php.';
+    else if (srv.setupRequired && srv.setupIssue === 'token_short') intro.textContent = 'El setup_token de config/config.php es demasiado corto: debe tener al menos ' + srv.setupTokenMin + ' caracteres. Alárguelo, recargue esta página y cree la contraseña aquí (o ejecute bin/set-password.php).';
+    else if (srv.setupRequired) intro.textContent = 'Falta crear la contraseña de administrador. Defina setup_token (' + srv.setupTokenMin + ' caracteres o más) en config/config.php y recargue la página, o ejecute bin/set-password.php.';
     else intro.textContent = 'Inicie sesión para guardar los cambios en el servidor. Sin sesión, los cambios se aplican solo en esta pantalla.';
   }
 
@@ -730,6 +731,8 @@
     S.server.authenticated = !!data.authenticated;
     S.server.setupRequired = !!data.setupRequired;
     S.server.setupEnabled = !!data.setupEnabled;
+    S.server.setupIssue = data.setupIssue || null;
+    S.server.setupTokenMin = data.setupTokenMin || 16;
     S.server.csrf = data.csrf || null;
   }
 

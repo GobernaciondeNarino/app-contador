@@ -63,13 +63,26 @@ function admin_exists(): bool
     return is_array($auth) && !empty($auth['hash']);
 }
 
+/** Motivo por el que no se puede crear la contraseña desde el navegador (solo mientras no exista). */
+function setup_issue(): ?string
+{
+    $len = strlen((string) app_config()['setup_token']);
+    if ($len === 0) {
+        return 'token_missing';
+    }
+    return $len < SETUP_TOKEN_MIN ? 'token_short' : null;
+}
+
 function session_payload(): array
 {
     $auth = is_authenticated();
+    $setupRequired = !admin_exists();
     return [
         'authenticated' => $auth,
-        'setupRequired' => !admin_exists(),
-        'setupEnabled' => !admin_exists() && strlen((string) app_config()['setup_token']) >= 16,
+        'setupRequired' => $setupRequired,
+        'setupEnabled' => $setupRequired && setup_issue() === null,
+        'setupIssue' => $setupRequired ? setup_issue() : null,
+        'setupTokenMin' => SETUP_TOKEN_MIN,
         'csrf' => $auth ? csrf_token() : null,
     ];
 }
@@ -110,8 +123,8 @@ function action_setup(): void
     $sent = is_string($body['token'] ?? null) ? $body['token'] : '';
     $password = is_string($body['password'] ?? null) ? $body['password'] : '';
 
-    if (strlen($token) < 16) {
-        fail(403, 'setup_disabled', 'Defina setup_token (16+ caracteres) en config/config.php para habilitar la configuración inicial.');
+    if (setup_issue() !== null) {
+        fail(403, 'setup_disabled', 'Defina setup_token (' . SETUP_TOKEN_MIN . '+ caracteres) en config/config.php para habilitar la configuración inicial.');
     }
     if (!hash_equals($token, $sent)) {
         rate_hit($bucket, 900);

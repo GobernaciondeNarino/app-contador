@@ -2,6 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import { ROOT } from './helpers.mjs';
 
@@ -57,4 +58,9 @@ test('el backend usa comparaciones en tiempo constante y hash de contraseñas', 
   assert.ok((php.match(/hash_equals\(/g) || []).length >= 3);
   assert.ok(!/\bmd5\(|\bsha1\(|\bunserialize\(|\bextract\(|\beval\(|shell_exec|passthru|\bsystem\(/.test(php));
   assert.match(php, /CURLPROTO_HTTPS/);
+});
+
+test('client_ip solo confía en CF-Connecting-IP cuando la conexión viene de Cloudflare', () => {
+  const out = execFileSync('php', [join(ROOT, 'tests/php/client-ip.php')], { encoding: 'utf8' });
+  assert.match(out, /^ok \d+/);
 });

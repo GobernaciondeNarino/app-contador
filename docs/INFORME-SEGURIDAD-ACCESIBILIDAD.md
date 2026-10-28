@@ -12,13 +12,13 @@
 
 | Prueba | Herramienta | Resultado |
 |---|---|---|
-| Seguridad de la API (39 casos) | `node:test` contra un servidor PHP real con datos temporales | **39/39 aprobadas** |
-| Revisión estática (7 casos) | `tests/static.test.mjs` | **7/7 aprobadas** |
+| Seguridad de la API (41 casos) | `node:test` contra un servidor PHP real con datos temporales | **41/41 aprobadas** |
+| Revisión estática y unitaria (8 casos) | `tests/static.test.mjs`, `tests/php/client-ip.php` | **8/8 aprobadas** |
 | Análisis estático (SAST) | Semgrep 127 reglas (`p/php`, `p/javascript`, `p/secrets`) | 3 avisos, **falsos positivos** verificados (ver 3.3) |
 | Dependencias | `npm audit` | 0 vulnerabilidades (en producción no hay dependencias de terceros) |
 | Accesibilidad automática | axe-core 4.10 (`wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, `wcag22aa`) en 8 vistas | **0 violaciones** |
 | Accesibilidad funcional (7 casos) | Playwright: teclado, foco, lector de pantalla, reflujo, movimiento reducido, contraste | **7/7 aprobadas** |
-| **Total** | `npm test` | **61/61 aprobadas** |
+| **Total** | `npm test` | **64/64 aprobadas** |
 
 Ejecutar: `npm install && npm test` (requiere PHP 7.4+, Node 20+ y Playwright con Chromium).
 
@@ -63,7 +63,7 @@ El archivo exportado (`design/Main.dc.html`) era una maqueta de una herramienta 
 
 ## 3. Pruebas de seguridad
 
-### 3.1 API (`tests/security.test.mjs`) — 39/39
+### 3.1 API (`tests/security.test.mjs`) — 41/41
 
 | Categoría OWASP | Casos verificados |
 |---|---|
@@ -77,7 +77,7 @@ El archivo exportado (`design/Main.dc.html`) era una maqueta de una herramienta 
 | A08 Integridad | Subidas con nombre aleatorio (sin usar el nombre original); escritura atómica de JSON |
 | A10 SSRF | El proxy de voz solo llama a `https://api.elevenlabs.io` (`CURLPROTO_HTTPS`), con el ID de voz validado (`[A-Za-z0-9_-]`) |
 
-### 3.2 Revisión estática (`tests/static.test.mjs`) — 7/7
+### 3.2 Revisión estática (`tests/static.test.mjs`) — 8/8
 
 - `app.js` sin `innerHTML`, `outerHTML`, `insertAdjacentHTML`, `document.write`, `eval`, `new Function` ni temporizadores con cadenas.
 - `app.js` sin llamadas directas a terceros ni cabecera `xi-api-key`.
@@ -85,6 +85,7 @@ El archivo exportado (`design/Main.dc.html`) era una maqueta de una herramienta 
 - Sin recursos de terceros (fuentes autoalojadas).
 - `storage/`, `config/`, `src/`, `bin/` con bloqueo en Apache (`Require all denied`) e IIS (`allowUnlisted="false"`).
 - `config/config.php` y `storage/*` excluidos de Git.
+- `client_ip()` confía en `CF-Connecting-IP` solo si `REMOTE_ADDR` pertenece a Cloudflare (8 casos, IPv4 e IPv6, incluida una cabecera falsificada).
 - Backend con `password_hash`/`password_verify`, `hash_equals` y sin funciones peligrosas (`md5`, `unserialize`, `extract`, `eval`, `system`, `shell_exec`).
 
 ### 3.3 Semgrep
@@ -101,7 +102,7 @@ php.lang.security.injection.tainted-filename  public/api.php  (action_asset, 3 l
 | Riesgo | Nivel | Recomendación |
 |---|---|---|
 | El estado (`api.php?action=state`) es público: nombres y profesiones de los ponentes | Bajo (se proyectan públicamente) | Si un evento es reservado, proteger el sitio con **Protección con contraseña** de Plesk |
-| El límite de intentos usa la IP del cliente (`REMOTE_ADDR`) | Bajo | En Plesk con nginx + Apache, la IP real llega por `mod_remoteip` (predeterminado). Si hay otro proxy o CDN, configurarlo para no compartir IP entre usuarios |
+| El límite de intentos usa la IP del cliente | Bajo | Desde la versión 1.0.1 se usa `CF-Connecting-IP` solo cuando la conexión viene de un rango publicado por Cloudflare (el sitio de producción está detrás de Cloudflare); en otro caso, `REMOTE_ADDR`. Si se agrega otro proxy o CDN, ampliar `client_ip()` en `src/bootstrap.php` |
 | Las cabeceras dependen de `.htaccess` o `web.config` | Bajo | En hosting solo nginx, aplicar las directivas de `docs/DESPLIEGUE-PLESK.md` §7 y verificar con el script de §8 |
 | Un único usuario administrador | Bajo | Suficiente para el uso previsto; cambiar la contraseña con `bin/set-password.php` al rotar personal |
 | Validación SVG basada en patrones | Bajo | Mitigado por la CSP `sandbox` y `default-src 'none'` al servir; si no se necesitan logos SVG, poner `allow_svg => false` |

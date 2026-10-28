@@ -4,7 +4,8 @@
  */
 declare(strict_types=1);
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.0.1';
+const SETUP_TOKEN_MIN = 16;
 const ASSET_ID_PATTERN = '/^[a-f0-9]{32}\.(png|jpg|webp|gif|svg)$/';
 const ASSET_REF_PATTERN = '/^api\.php\?action=asset&id=([a-f0-9]{32}\.(?:png|jpg|webp|gif|svg))$/';
 
@@ -262,9 +263,57 @@ function require_admin(): void
 
 /* ---------- límite de intentos ---------- */
 
+/** Rangos de https://www.cloudflare.com/ips-v4 e ips-v6 (consultados el 28/10/2026). */
+const CLOUDFLARE_RANGES = [
+    '173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22', '141.101.64.0/18',
+    '108.162.192.0/18', '190.93.240.0/20', '188.114.96.0/20', '197.234.240.0/22', '198.41.128.0/17',
+    '162.158.0.0/15', '104.16.0.0/13', '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22',
+    '2400:cb00::/32', '2606:4700::/32', '2803:f800::/32', '2405:b500::/32', '2405:8100::/32',
+    '2a06:98c0::/29', '2c0f:f248::/32',
+];
+
+/**
+ * IP real del cliente. Si la petición llega desde un nodo de Cloudflare (REMOTE_ADDR dentro de sus
+ * rangos publicados), se usa CF-Connecting-IP; de lo contrario esa cabecera se ignora porque
+ * cualquiera podría falsificarla. Sin esto, todos los visitantes compartirían el límite de intentos.
+ */
 function client_ip(): string
 {
-    return (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+    $remote = (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+    $cf = (string) ($_SERVER['HTTP_CF_CONNECTING_IP'] ?? '');
+    if ($cf !== '' && filter_var($cf, FILTER_VALIDATE_IP) && ip_in_ranges($remote, CLOUDFLARE_RANGES)) {
+        return $cf;
+    }
+    return $remote;
+}
+
+function ip_in_ranges(string $ip, array $ranges): bool
+{
+    $bin = @inet_pton($ip);
+    if ($bin === false) {
+        return false;
+    }
+    foreach ($ranges as $cidr) {
+        [$net, $bits] = explode('/', $cidr);
+        $netBin = inet_pton($net);
+        if ($netBin === false || strlen($netBin) !== strlen($bin)) {
+            continue;
+        }
+        $bits = (int) $bits;
+        $bytes = intdiv($bits, 8);
+        if (substr($bin, 0, $bytes) !== substr($netBin, 0, $bytes)) {
+            continue;
+        }
+        $rest = $bits % 8;
+        if ($rest === 0) {
+            return true;
+        }
+        $mask = (0xFF << (8 - $rest)) & 0xFF;
+        if ((ord($bin[$bytes]) & $mask) === (ord($netBin[$bytes]) & $mask)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 /** Devuelve los segundos de espera si se superó el límite, o 0 si se permite. */

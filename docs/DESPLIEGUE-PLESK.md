@@ -65,7 +65,7 @@ return [
 ];
 ```
 
-Para generar el token puede usar el generador de contraseñas de Plesk o un gestor de contraseñas (mínimo 32 caracteres).
+Para generar el token puede usar el generador de contraseñas de Plesk o un gestor de contraseñas. **Debe tener al menos 16 caracteres** (se recomiendan 32); con menos, la pestaña *Acceso* no muestra el formulario y avisa que el token es demasiado corto.
 
 3. Permisos: `storage/` y sus subcarpetas con **750** y propietario el usuario de la suscripción. En Plesk Linux esto es lo predeterminado al subir archivos con ese usuario. Los archivos que crea la aplicación quedan con permisos **640**.
 
@@ -109,6 +109,12 @@ location ~* \.woff2$ { add_header Cache-Control "public, max-age=31536000, immut
 
 - Desactive la exposición de versión de PHP (`expose_php = Off`) en **Configuración de PHP**.
 
+### Sitio detrás de Cloudflare
+
+- El límite de intentos usa la IP real del visitante: la aplicación toma `CF-Connecting-IP` solo si la conexión llega desde los rangos oficiales de Cloudflare, así que no hay que configurar nada.
+- Si Plesk ya envía `Strict-Transport-Security`, quite la línea `Header always set Strict-Transport-Security` de `public/.htaccess` para no enviar la cabecera dos veces (el navegador solo tiene en cuenta la primera).
+- Plesk agrega `X-Powered-By: PleskLin`. Se puede quitar en **Configuración de Apache y nginx → Directivas adicionales de nginx** con `proxy_hide_header X-Powered-By;`.
+
 ## 8. Verificación después de publicar
 
 Ejecute desde cualquier equipo (reemplace el dominio):
@@ -148,6 +154,7 @@ Sin sesión iniciada la pantalla funciona igual (muestra la última configuraci�
 
 | Síntoma | Causa probable | Solución |
 |---|---|---|
+| *Acceso* dice "Falta crear la contraseña…" o "El setup_token… es demasiado corto" y no muestra formulario | `setup_token` vacío o con menos de 16 caracteres | Use un token de 16+ caracteres en `config/config.php` y recargue la página. Compruebe con `api.php?action=session`: debe mostrar `"setupEnabled":true` |
 | "No se detectó el servidor (api.php)" | PHP desactivado o raíz del documento incorrecta | Active PHP en la suscripción y verifique que la raíz apunte a `public/` |
 | Error 500 "La carpeta de datos…" | `storage/` sin permisos de escritura o fuera de `open_basedir` | Ajuste permisos (750) o `storage_dir`; el `open_basedir` predeterminado de Plesk ya incluye la carpeta de la suscripción |
 | "Token de seguridad inválido" | Sesión expirada | Recargue la página e inicie sesión de nuevo |
