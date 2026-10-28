@@ -365,6 +365,58 @@ describe('Asistente de instalación', () => {
   });
 });
 
+describe('Asistente en subdirectorio con reescritura (como tic.narino.gov.co/app/tiempo/)', () => {
+  let rsrv, rbrowser;
+  before(async () => {
+    rsrv = await startServer({ setup_token: 'Corto$26#' }, { router: join(ROOT, 'tests/php/rewrite-router.php') });
+    rbrowser = await chromium.launch();
+  });
+  after(async () => { await rbrowser?.close(); await rsrv?.stop(); });
+
+  test('instala con token generado, recupera una sesión perdida y guarda', async () => {
+    const ctx = await rbrowser.newContext({ viewport: { width: 1280, height: 860 } });
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await page.goto(rsrv.url + '/app/tiempo/', { waitUntil: 'networkidle' });
+    await page.waitForSelector('#wizard:not([hidden])');
+    await page.waitForFunction(() => !document.getElementById('wz-next').disabled);
+    assert.equal(await page.locator('.wz-check[data-status="error"]').count(), 0);
+    await page.click('#wz-next');
+
+    const token = readFileSync(join(rsrv.storage, 'setup-token.php'), 'utf8').match(/TOKEN:\s*([a-f0-9]+)/)[1];
+    await page.fill('#wz-token', token);
+    await page.fill('#wz-pass1', ADMIN_PASSWORD);
+    await page.fill('#wz-pass2', ADMIN_PASSWORD);
+    await page.click('#wz-next');
+    await page.waitForSelector('[data-step="event"]:not([hidden])');
+    const cookies = await ctx.cookies();
+    assert.equal(cookies.find((c) => c.name === 'CONTADORSID').path, '/app/tiempo/');
+
+    await page.fill('#wz-title-in', 'Evento en subdirectorio');
+    for (const stepId of ['times', 'turns']) { await page.click('#wz-next'); await page.waitForSelector(`[data-step="${stepId}"]:not([hidden])`); }
+    await page.fill('#wz-t-name-0', 'Ana Pérez');
+    for (const stepId of ['voice', 'summary']) { await page.click('#wz-next'); await page.waitForSelector(`[data-step="${stepId}"]:not([hidden])`); }
+
+    // Sesión perdida justo antes de guardar: el asistente lleva al inicio de sesión y vuelve al resumen.
+    await ctx.clearCookies();
+    await page.click('#wz-next');
+    await page.waitForSelector('[data-step="admin"]:not([hidden])');
+    assert.equal(await page.isVisible('#wz-login'), true);
+    assert.match(await page.textContent('#wz-error'), /Inicie sesión/);
+    await page.fill('#wz-loginpass', ADMIN_PASSWORD);
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('[data-step="summary"]:not([hidden])');
+    assert.match(await page.textContent('#wz-summary'), /Evento en subdirectorio/);
+    await page.click('#wz-next');
+    await page.waitForSelector('#wizard', { state: 'hidden' });
+    assert.equal(await page.textContent('#title'), 'Evento en subdirectorio');
+    assert.equal(JSON.parse(readFileSync(join(rsrv.storage, 'state.json'), 'utf8')).cfg.title, 'Evento en subdirectorio');
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+});
+
 after(() => {
   mkdirSync(REPORTS, { recursive: true });
   const lines = ['# Resultado axe-core', '', `Etiquetas: ${TAGS.join(', ')}`, '', '| Vista | Violaciones | Revisión manual (incomplete) |', '|---|---|---|'];

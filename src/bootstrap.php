@@ -4,7 +4,7 @@
  */
 declare(strict_types=1);
 
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.1.1';
 const SETUP_TOKEN_MIN = 16;
 const ASSET_ID_PATTERN = '/^[a-f0-9]{32}\.(png|jpg|webp|gif|svg)$/';
 const ASSET_REF_PATTERN = '/^api\.php\?action=asset&id=([a-f0-9]{32}\.(?:png|jpg|webp|gif|svg))$/';
@@ -166,10 +166,20 @@ function is_https(): bool
     return strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
 }
 
+/**
+ * Ruta de la cookie de sesión: el directorio de la URL que pidió el navegador (REQUEST_URI), no el del
+ * script. Si el sitio se publica con el .htaccess de la raíz (repositorio en /app/tiempo/ reescrito a
+ * public/), SCRIPT_NAME vale /app/tiempo/public/api.php pero el navegador llama a /app/tiempo/api.php:
+ * con la ruta del script la cookie nunca se enviaba y toda escritura respondía 401.
+ */
 function cookie_path(): string
 {
-    $dir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
-    return rtrim($dir, '/') . '/';
+    $path = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);
+    if (!is_string($path) || $path === '' || $path[0] !== '/') {
+        return '/';
+    }
+    $dir = substr($path, 0, (int) strrpos($path, '/') + 1);
+    return preg_match('#^/[A-Za-z0-9._~%/-]*$#', $dir) ? $dir : '/';
 }
 
 /** Abre la sesión solo si ya existe la cookie o si $create es true (evita sesiones para cada visitante). */

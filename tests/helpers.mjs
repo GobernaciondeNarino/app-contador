@@ -19,14 +19,17 @@ function freePort() {
   });
 }
 
-export async function startServer(extraConfig = {}) {
+/** opts.router: script de router para `php -S` (p. ej. para imitar la reescritura de Apache en un subdirectorio). */
+export async function startServer(extraConfig = {}, opts = {}) {
   const base = mkdtempSync(join(tmpdir(), 'contador-test-'));
   const storage = join(base, 'storage');
   const configFile = join(base, 'config.php');
   const cfg = { storage_dir: storage, setup_token: SETUP_TOKEN, ...extraConfig };
   writeFileSync(configFile, '<?php return ' + toPhp(cfg) + ';\n');
   const port = await freePort();
-  const proc = spawn('php', ['-S', `127.0.0.1:${port}`, '-t', join(ROOT, 'public')], {
+  const args = ['-S', `127.0.0.1:${port}`, '-t', join(ROOT, 'public')];
+  if (opts.router) args.push(opts.router);
+  const proc = spawn('php', args, {
     env: { ...process.env, CONTADOR_CONFIG: configFile },
     stdio: 'ignore',
   });

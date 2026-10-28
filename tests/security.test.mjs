@@ -3,7 +3,7 @@ import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { startServer, Client, validState, PNG_1PX, ADMIN_PASSWORD } from './helpers.mjs';
+import { startServer, Client, validState, PNG_1PX, ADMIN_PASSWORD, ROOT } from './helpers.mjs';
 
 function upload(client, name, type, content) {
   const form = new FormData();
@@ -370,5 +370,27 @@ describe('API: asistente de instalación', () => {
       assert.equal(s.data.tokenSource, null);
       assert.equal((await c.setup()).status, 409);
     } finally { await srv.stop(); }
+  });
+});
+
+describe('API: despliegue en subdirectorio con reescritura (como tic.narino.gov.co/app/tiempo/)', () => {
+  let srv, base;
+  before(async () => {
+    srv = await startServer({}, { router: join(ROOT, 'tests/php/rewrite-router.php') });
+    base = srv.url + '/app/tiempo';
+  });
+  after(() => srv.stop());
+
+  test('la cookie de sesión usa la ruta pedida por el navegador y la sesión se mantiene al guardar', async () => {
+    const c = new Client(base);
+    const r = await c.setup();
+    assert.equal(r.status, 200);
+    const cookie = c.lastSetCookie.find((x) => x.startsWith('CONTADORSID='));
+    assert.match(cookie, /Path=\/app\/tiempo\/(;|$)/i, cookie);
+    const saved = await c.req('save', { method: 'POST', json: validState() });
+    assert.equal(saved.status, 200, JSON.stringify(saved.data));
+    const login = new Client(base);
+    assert.equal((await login.login()).status, 200);
+    assert.match(login.lastSetCookie.find((x) => x.startsWith('CONTADORSID=')), /Path=\/app\/tiempo\//i);
   });
 });

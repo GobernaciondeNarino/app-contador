@@ -1,7 +1,7 @@
 # Informe de pruebas de seguridad y accesibilidad
 
 **Aplicación:** Contador de exposiciones — Gobernación de Nariño
-**Versión evaluada:** 1.1.0 (rama `claude/dreamy-edison-c86vkv`)
+**Versión evaluada:** 1.1.1 (rama `claude/dreamy-edison-c86vkv`)
 **Fecha:** 27 de octubre de 2026
 **Alcance:** frontend (`public/index.html`, `assets/`), API PHP (`public/api.php`, `src/`), configuración de servidor para Plesk (`.htaccess`, `web.config`, `.user.ini`).
 **Marco de referencia:** OWASP Top 10 (2021) y OWASP ASVS 4.0 nivel 1; WCAG 2.1 y 2.2 nivel AA, exigido por la Resolución 1519 de 2020 de MinTIC (Anexo 1) para sitios de entidades públicas; NTC 5854.
@@ -12,13 +12,13 @@
 
 | Prueba | Herramienta | Resultado |
 |---|---|---|
-| Seguridad de la API (43 casos) | `node:test` contra un servidor PHP real con datos temporales | **43/43 aprobadas** |
+| Seguridad de la API (44 casos) | `node:test` contra un servidor PHP real con datos temporales, incluido un despliegue en subdirectorio con reescritura | **44/44 aprobadas** |
 | Revisión estática y unitaria (8 casos) | `tests/static.test.mjs`, `tests/php/client-ip.php` | **8/8 aprobadas** |
 | Análisis estático (SAST) | Semgrep 127 reglas (`p/php`, `p/javascript`, `p/secrets`) | 3 avisos, **falsos positivos** verificados (ver 3.3) |
 | Dependencias | `npm audit` | 0 vulnerabilidades (en producción no hay dependencias de terceros) |
 | Accesibilidad automática | axe-core 4.10 (`wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, `wcag22aa`) en 16 vistas (incluye los 7 pasos del asistente) | **0 violaciones** |
-| Accesibilidad funcional (11 casos) | Playwright: teclado, foco, lector de pantalla, reflujo, movimiento reducido, contraste, asistente de instalación | **11/11 aprobadas** |
-| **Total** | `npm test` | **70/70 aprobadas** |
+| Accesibilidad funcional (12 casos) | Playwright: teclado, foco, lector de pantalla, reflujo, movimiento reducido, contraste, asistente de instalación | **12/12 aprobadas** |
+| **Total** | `npm test` | **72/72 aprobadas** |
 
 Ejecutar: `npm install && npm test` (requiere PHP 7.4+, Node 20+ y Playwright con Chromium).
 
@@ -63,7 +63,7 @@ El archivo exportado (`design/Main.dc.html`) era una maqueta de una herramienta 
 
 ## 3. Pruebas de seguridad
 
-### 3.1 API (`tests/security.test.mjs`) — 43/43
+### 3.1 API (`tests/security.test.mjs`) — 44/44
 
 | Categoría OWASP | Casos verificados |
 |---|---|
@@ -85,6 +85,7 @@ El archivo exportado (`design/Main.dc.html`) era una maqueta de una herramienta 
 | Fuerza bruta del token | 5 intentos por IP cada 15 min (429) | Ver «límite de intentos» |
 | Divulgación de la configuración del servidor | `install_check` solo responde antes de instalar o con sesión de administrador | Sin sesión tras instalar → 403 |
 | `storage/` expuesta por un despliegue incorrecto | El asistente escribe `storage/install-probe.txt` con un valor aleatorio, intenta descargarlo desde el navegador y bloquea la instalación si lo consigue. El archivo se borra al instalar y al guardar | Archivo creado con el valor devuelto y borrado al instalar y guardar |
+| Cookie de sesión con ruta incorrecta tras una reescritura de URL | La ruta de la cookie se toma de la URL pedida (`REQUEST_URI`), no de `SCRIPT_NAME` (corregido en 1.1.1, detectado en producción) | Cookie `Path=/app/tiempo/` y guardado 200 a través de un router que imita el `.htaccess` |
 | Reinstalación | `setup` responde 409 una vez existe el administrador y ya no informa el origen del token | 409 |
 
 ### 3.2 Revisión estática (`tests/static.test.mjs`) — 8/8
@@ -163,6 +164,7 @@ El detalle de la última ejecución queda en `tests/reports/axe-resultados.md`.
 | Asistente: errores en `role=alert`, campo con `aria-invalid` y `aria-describedby`, el foco va al campo con error; Enter dentro de un campo avanza; «Atrás» conserva lo escrito | 3.3.1, 3.3.3, 2.1.1 | Aprobada |
 | Asistente: recorrido completo con teclado hasta guardar; anuncio «Instalación completada» y foco en *Iniciar* | 2.1.1, 4.1.3 | Aprobada |
 | Asistente a 320 px sin desplazamiento horizontal | 1.4.10 | Aprobada |
+| Asistente publicado en `/app/tiempo/` con reescritura: instalación con token generado, sesión perdida antes de guardar → vuelve al inicio de sesión y luego al resumen | 3.3.4, 2.4.3 | Aprobada |
 | Contraste de la paleta institucional por defecto (11 combinaciones) | 1.4.3, 1.4.11 | Aprobada |
 
 ### 4.3 Contraste de la paleta por defecto

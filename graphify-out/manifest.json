@@ -36,9 +36,9 @@
     "semantic_hash": ""
   },
   "src/bootstrap.php": {
-    "mtime": 1793220890.2024243,
-    "seen": 1793221435.7777689,
-    "ast_hash": "9090d63f5f59686502094855a1d933cf",
+    "mtime": 1793222738.3253999,
+    "seen": 1793222830.7440999,
+    "ast_hash": "420dabef59a7b7bb53df0baee5f07134",
     "semantic_hash": ""
   },
   "src/validate.php": {
@@ -48,15 +48,15 @@
     "semantic_hash": ""
   },
   "tests/a11y.test.mjs": {
-    "mtime": 1793221256.5494895,
-    "seen": 1793221435.7777736,
-    "ast_hash": "06b69c5450a24cebab4797a9779efb93",
+    "mtime": 1793222766.3816729,
+    "seen": 1793222830.7441046,
+    "ast_hash": "8af538d6d80f5d447ba6d4f42d67f8bf",
     "semantic_hash": ""
   },
   "tests/helpers.mjs": {
-    "mtime": 1793134315.0470936,
-    "seen": 1793134830.8143382,
-    "ast_hash": "c265dfc0c19962396a968609bce989b6",
+    "mtime": 1793222725.262926,
+    "seen": 1793222830.7441072,
+    "ast_hash": "6b04b34f8a4043635c60e56ee6f751a5",
     "semantic_hash": ""
   },
   "tests/lint.mjs": {
@@ -66,9 +66,9 @@
     "semantic_hash": ""
   },
   "tests/security.test.mjs": {
-    "mtime": 1793221112.0819585,
-    "seen": 1793221435.7777846,
-    "ast_hash": "f1d9acc8e03f1bddb7b6c19fb99877ce",
+    "mtime": 1793222729.5155084,
+    "seen": 1793222830.7441165,
+    "ast_hash": "a5a03476e7ff9dbfa507c5f29ba68f03",
     "semantic_hash": ""
   },
   "tests/static.test.mjs": {
@@ -102,15 +102,15 @@
     "semantic_hash": ""
   },
   "docs/DESPLIEGUE-PLESK.md": {
-    "mtime": 1793221363.6544406,
-    "seen": 1793221435.7777967,
-    "ast_hash": "8d743068932c93203ffcca9a98055dad",
+    "mtime": 1793222828.216711,
+    "seen": 1793222830.744128,
+    "ast_hash": "cbd9a0f51aff6576b8be7dba8089d718",
     "semantic_hash": ""
   },
   "docs/INFORME-SEGURIDAD-ACCESIBILIDAD.md": {
-    "mtime": 1793221385.58697,
-    "seen": 1793221435.777799,
-    "ast_hash": "a451d54e3ae96f08317c392e06df3c2b",
+    "mtime": 1793222828.2177,
+    "seen": 1793222830.7441294,
+    "ast_hash": "728bc42c4a62d136cf3125bb6a8f2786",
     "semantic_hash": ""
   },
   "public/assets/fonts/OFL-HindMadurai.txt": {
@@ -126,9 +126,9 @@
     "semantic_hash": ""
   },
   "public/index.html": {
-    "mtime": 1793221385.59394,
-    "seen": 1793221435.7778058,
-    "ast_hash": "f87e32431bf68c9718ca1d00e7c46abe",
+    "mtime": 1793222828.2312539,
+    "seen": 1793222830.7441347,
+    "ast_hash": "ec1e1b2203114e7d37d845e7c95ca452",
     "semantic_hash": ""
   },
   "storage/README.md": {
@@ -138,8 +138,8 @@
     "semantic_hash": ""
   },
   "tests/reports/axe-resultados.md": {
-    "mtime": 1793221414.8465953,
-    "seen": 1793221435.7778096,
+    "mtime": 1793222807.0877964,
+    "seen": 1793222830.7441387,
     "ast_hash": "744ffd345ba2e00a097f0dcf2b8d87cb",
     "semantic_hash": ""
   },
@@ -156,9 +156,15 @@
     "semantic_hash": ""
   },
   "public/assets/js/wizard.js": {
-    "mtime": 1793221065.2683122,
-    "seen": 1793221435.7777665,
-    "ast_hash": "59bfd7143fcad321e31950b142d6f803",
+    "mtime": 1793222750.7887774,
+    "seen": 1793222830.7440963,
+    "ast_hash": "b9e3c98a0ebd84040b759eab23b69b6a",
+    "semantic_hash": ""
+  },
+  "tests/php/rewrite-router.php": {
+    "mtime": 1793222725.2316313,
+    "seen": 1793222830.744114,
+    "ast_hash": "2a06fdff444d7af177bf88cbbb06bc5f",
     "semantic_hash": ""
   },
   "package-lock.json": {

@@ -21,7 +21,7 @@
     var S = ctx.S;
     var $ = function (id) { return document.getElementById(id); };
     var root = $('wizard'), form = $('wz-form'), errorBox = $('wz-error');
-    var step = 0, draft = null, pendingKey = null, checksOk = false, busy = false, lastFocus = null;
+    var step = 0, draft = null, pendingKey = null, checksOk = false, busy = false, lastFocus = null, resumeAt = null;
 
     /* ---------- utilidades ---------- */
 
@@ -72,6 +72,7 @@
       };
       if (!draft.turns.length) draft.turns.push({ name: '', profession: '', minutes: ctx.clamp(draft.cfg.minutes, 1, 180) });
       pendingKey = null;
+      resumeAt = null;
       lastFocus = document.activeElement;
       root.hidden = false;
       ctx.setAppInert(true);
@@ -179,7 +180,9 @@
       clearErrors();
       var id = STEPS[step][0];
       leave[id]().then(function (ok) {
-        if (ok && id !== 'summary') go(step + 1);
+        if (!ok || id === 'summary') return;
+        if (id === 'admin' && resumeAt !== null) { var to = resumeAt; resumeAt = null; go(to); return; }
+        go(step + 1);
       });
     }
 
@@ -472,9 +475,13 @@
         return true;
       }).catch(function (e) {
         setBusy(false, 'Guardar y abrir el contador');
-        if (e.status === 401) {
+        if (e.status === 401 || (e.data && e.data.error === 'csrf')) {
+          // Sesión perdida: volver al paso de administrador con los datos intactos y regresar al resumen al iniciar sesión.
           S.server.authenticated = false;
-          showError('La sesión expiró. Vuelva al paso 2 para iniciar sesión.');
+          S.server.csrf = null;
+          resumeAt = step;
+          go(indexOf('admin'));
+          showError('La sesión de administrador no está activa. Inicie sesión y el asistente volverá al resumen para guardar.');
         } else {
           showError(e.message + (e.data && e.data.field ? ' (campo: ' + e.data.field + ')' : ''));
         }
