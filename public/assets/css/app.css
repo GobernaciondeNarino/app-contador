@@ -144,7 +144,9 @@ button { font-family: inherit; }
   display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 24px;
   border-top: 1px solid var(--line); background: var(--surface-alt);
 }
-.save-status { margin: 0; font: 600 14px/20px var(--font-body); color: var(--body-text); flex: 1; }
+.foot-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }
+.panel-foot { flex-wrap: wrap; }
+.save-status { margin: 0; font: 600 14px/20px var(--font-body); color: var(--body-text); flex: 1 1 220px; }
 .save-status[data-tone="ok"] { color: var(--brand-green-dark); }
 .save-status[data-tone="warn"] { color: #7A4B00; }
 .save-status[data-tone="error"] { color: var(--danger); }

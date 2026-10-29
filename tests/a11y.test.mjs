@@ -2,9 +2,10 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { readFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, mkdirSync, writeFileSync, mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { startServer, Client, validState, ROOT, SETUP_TOKEN, ADMIN_PASSWORD } from './helpers.mjs';
+import { startServer, Client, validState, ROOT, SETUP_TOKEN, ADMIN_PASSWORD, PNG_1PX } from './helpers.mjs';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
@@ -413,6 +414,133 @@ describe('Asistente en subdirectorio con reescritura (como tic.narino.gov.co/app
     assert.equal(await page.textContent('#title'), 'Evento en subdirectorio');
     assert.equal(JSON.parse(readFileSync(join(rsrv.storage, 'state.json'), 'utf8')).cfg.title, 'Evento en subdirectorio');
     assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+});
+
+describe('Persistencia de fondo y colores (sin tener que volver a configurarlos al recargar)', () => {
+  let psrv, pbrowser, base, png;
+  const state = () => JSON.parse(readFileSync(join(psrv.storage, 'state.json'), 'utf8'));
+  const setColorInput = (page, id, value) => page.evaluate(([i, v]) => {
+    const n = document.getElementById(i); n.value = v; n.dispatchEvent(new Event('input', { bubbles: true }));
+  }, [id, value]);
+  const bg = (page) => page.evaluate(() => getComputedStyle(document.getElementById('app')).backgroundColor);
+  async function waitServer(pred, ms = 5000) {
+    const end = Date.now() + ms;
+    while (Date.now() < end) { try { if (pred(state())) return true; } catch { /* escritura en curso */ } await new Promise((r) => setTimeout(r, 100)); }
+    return false;
+  }
+  async function newPage(login) {
+    const ctx = await pbrowser.newContext({ viewport: { width: 1280, height: 860 } });
+    const page = await ctx.newPage();
+    page.on('dialog', (d) => d.accept());
+    await page.goto(base + '/', { waitUntil: 'networkidle' });
+    if (login) {
+      await page.click('#menu-btn'); await page.click('#tab-access');
+      await page.fill('#f-pass', ADMIN_PASSWORD); await page.keyboard.press('Enter');
+      await page.waitForSelector('#logged-box:not([hidden])');
+    }
+    return { ctx, page };
+  }
+
+  before(async () => {
+    psrv = await startServer({}, { router: join(ROOT, 'tests/php/rewrite-router.php') });
+    base = psrv.url + '/app/tiempo';
+    const admin = new Client(base);
+    await admin.setup();
+    await admin.req('save', { method: 'POST', json: validState() });
+    png = join(mkdtempSync(join(tmpdir(), 'contador-png-')), 'fondo.png');
+    writeFileSync(png, PNG_1PX);
+    pbrowser = await chromium.launch();
+  });
+  after(async () => { await pbrowser?.close(); await psrv?.stop(); });
+
+  test('con sesión: imagen de fondo y colores se guardan solos y siguen tras recargar', async () => {
+    const { ctx, page } = await newPage(true);
+    await page.click('#tab-general');
+    await page.setInputFiles('#f-bgi', png);
+    await setColorInput(page, 'f-bgc', '#003366');
+    await page.click('#tab-colors');
+    await setColorInput(page, 'c-title', '#ffffff');
+    await page.waitForFunction(() => /Guardado automáticamente/.test(document.getElementById('save-status').textContent));
+    const st = state();
+    assert.match(st.cfg.bgImage, /^api\.php\?action=asset&id=[a-f0-9]{32}\.png$/);
+    assert.equal(st.cfg.colors.bg, '#003366');
+    assert.equal(st.cfg.colors.title, '#FFFFFF');
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForTimeout(200);
+    assert.equal(await bg(page), 'rgb(0, 51, 102)');
+    assert.equal(await page.isVisible('#bg-img'), true);
+    assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('title')).color), 'rgb(255, 255, 255)');
+    await ctx.close();
+  });
+
+  test('con sesión: cerrar el panel justo después de cambiar guarda de inmediato', async () => {
+    const { ctx, page } = await newPage(true);
+    await page.click('#tab-general');
+    await setColorInput(page, 'f-bgc', '#f4f6f5');
+    await page.keyboard.press('Escape');
+    assert.ok(await waitServer((s) => s.cfg.colors.bg === '#F4F6F5', 1500), 'no se guardó al cerrar el panel');
+    await ctx.close();
+  });
+
+  test('con sesión: recargar sin esperar no pierde el cambio', async () => {
+    const { ctx, page } = await newPage(true);
+    await page.click('#tab-general');
+    await setColorInput(page, 'f-bgc', '#e6eae8');
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForTimeout(300);
+    assert.equal(await bg(page), 'rgb(230, 234, 232)');
+    assert.ok(await waitServer((s) => s.cfg.colors.bg === '#E6EAE8'), 'el cambio no llegó al servidor');
+    await ctx.close();
+  });
+
+  test('sin sesión: el cambio se conserva en el navegador, se avisa y se sube al iniciar sesión', async () => {
+    const before = state().cfg.colors.bg;
+    const { ctx, page } = await newPage(false);
+    await page.click('#menu-btn'); await page.click('#tab-general');
+    await setColorInput(page, 'f-bgc', '#ffffff');
+    await page.keyboard.press('Escape');
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForTimeout(300);
+    assert.equal(await bg(page), 'rgb(255, 255, 255)', 'se recupera el borrador local');
+    assert.equal(state().cfg.colors.bg, before, 'sin sesión no se escribe en el servidor');
+    await page.click('#menu-btn');
+    assert.match(await page.textContent('#save-status'), /solo en este navegador/);
+    assert.equal(await page.isVisible('#discard-btn'), true);
+    await axe(page, 'Configuración · cambios locales sin sesión');
+    await page.click('#tab-access');
+    await page.fill('#f-pass', ADMIN_PASSWORD); await page.keyboard.press('Enter');
+    assert.ok(await waitServer((s) => s.cfg.colors.bg === '#FFFFFF'), 'al iniciar sesión se suben los cambios pendientes');
+    await ctx.close();
+  });
+
+  test('un borrador local se descarta si el servidor cambió después', async () => {
+    const { ctx, page } = await newPage(false);
+    await page.click('#menu-btn'); await page.click('#tab-general');
+    await setColorInput(page, 'f-bgc', '#000000');
+    await page.keyboard.press('Escape');
+    const admin = new Client(base);
+    await admin.login();
+    const cur = state();
+    await admin.req('save', { method: 'POST', json: { cfg: { ...cur.cfg, colors: { ...cur.cfg.colors, bg: '#10A13B' } }, turns: cur.turns, rev: cur.rev } });
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForTimeout(300);
+    assert.equal(await bg(page), 'rgb(16, 161, 59)', 'prevalece la versión más reciente del servidor');
+    assert.equal(await page.evaluate(() => localStorage.getItem('contador-exposiciones:borrador')), null);
+    await ctx.close();
+  });
+
+  test('sin sesión: «Descartar» vuelve a la configuración del servidor', async () => {
+    const { ctx, page } = await newPage(false);
+    await page.click('#menu-btn'); await page.click('#tab-general');
+    await setColorInput(page, 'f-bgc', '#000000');
+    await page.click('#discard-btn');
+    await page.waitForFunction(() => getComputedStyle(document.getElementById('app')).backgroundColor === 'rgb(16, 161, 59)');
+    assert.equal(await page.isHidden('#discard-btn'), true);
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForTimeout(200);
+    assert.equal(await bg(page), 'rgb(16, 161, 59)');
     await ctx.close();
   });
 });

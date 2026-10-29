@@ -20,3 +20,4 @@ Etiquetas: wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa
 | Asistente · 6 Voz | 0 | — |
 | Asistente · 7 Resumen | 0 | — |
 | Asistente · móvil 320 px | 0 | color-contrast (10) |
+| Configuración · cambios locales sin sesión | 0 | color-contrast (7) |

@@ -6,6 +6,9 @@
 
   var API = 'api.php';
   var LOCAL_KEY = 'contador-exposiciones:v1';
+  // Borrador de cambios hechos en esta pantalla que aún no llegaron al servidor (nunca incluye la API key).
+  var DRAFT_KEY = 'contador-exposiciones:borrador';
+  var AUTOSAVE_MS = 1000;
 
   var DEFAULT_COLORS = {
     bg: '#FFFFFF', title: '#000000', subtitle: '#4A4A4A', header: '#003366',
@@ -51,6 +54,7 @@
     turns: defaultTurns(),
     idx: 0, running: false, rem: 300, remaining: 300, total: 300,
     menuOpen: false, tab: 'general', dirty: false, pendingKey: null,
+    changeSeq: 0, saving: false, saveQueued: false, savedAt: null, saveError: '',
     server: { available: false, authenticated: false, setupRequired: false, setupEnabled: false, tokenSource: null, setupTokenMin: 16, hasState: false, csrf: null, rev: 0, keySet: false, keyLocked: false, uploadMb: 4, svg: true }
   };
 
@@ -455,6 +459,7 @@
   }
   var lastFocus = null;
   function closeMenu() {
+    flushSave();
     S.menuOpen = false;
     el.overlay.hidden = true;
     el.app.inert = false;
@@ -637,10 +642,23 @@
 
   function renderSaveState() {
     var st = el.saveStatus, srv = S.server;
-    el.saveBtn.textContent = srv.available && !srv.authenticated ? 'Iniciar sesión para guardar' : 'Guardar cambios';
+    el.saveBtn.textContent = srv.available && !srv.authenticated ? 'Iniciar sesión para guardar' : 'Guardar ahora';
+    $('discard-btn').hidden = !(srv.available && !srv.authenticated && S.dirty);
     if (st.dataset.lock === '1') return;
-    if (S.dirty) { st.textContent = 'Cambios sin guardar.'; st.dataset.tone = 'warn'; }
-    else { st.textContent = srv.available ? 'Sin cambios pendientes.' : 'Modo sin servidor: se guarda en este navegador.'; st.dataset.tone = 'ok'; }
+    var text, tone = 'ok';
+    if (!srv.available) {
+      text = S.dirty ? 'Guardando en este navegador…' : 'Modo sin servidor: los cambios se guardan solos en este navegador.';
+    } else if (!srv.authenticated) {
+      text = S.dirty ? 'Cambios conservados solo en este navegador. Inicie sesión para guardarlos en el servidor.' : 'Sin cambios pendientes.';
+      tone = S.dirty ? 'warn' : 'ok';
+    } else if (S.saveError) {
+      text = S.saveError; tone = 'error';
+    } else if (S.saving || S.dirty) {
+      text = 'Guardando…'; tone = 'warn';
+    } else {
+      text = S.savedAt ? 'Guardado automáticamente en el servidor (' + S.savedAt + ')' : 'Los cambios se guardan automáticamente en el servidor.';
+    }
+    st.textContent = text; st.dataset.tone = tone;
   }
   function flashStatus(text, tone) {
     var st = el.saveStatus;
@@ -651,7 +669,51 @@
 
   /* ---------------- cambios de estado ---------------- */
 
-  function markDirty() { S.dirty = true; if (S.menuOpen) renderSaveState(); }
+  /** Todo cambio de configuración pasa por aquí: se conserva en el navegador y se guarda solo en el servidor. */
+  function markDirty() {
+    S.dirty = true;
+    S.changeSeq++;
+    S.saveError = '';
+    writeDraft();
+    scheduleSave();
+    if (S.menuOpen) renderSaveState();
+  }
+
+  /* ---------------- guardado automático y borrador local ---------------- */
+
+  var saveTimer = null;
+
+  function writeDraft() {
+    if (!S.server.available) return;
+    try {
+      window.localStorage.setItem(DRAFT_KEY, JSON.stringify({ baseRev: S.server.rev, cfg: S.cfg, turns: S.turns, at: Date.now() }));
+    } catch (e) { /* almacenamiento local no disponible */ }
+  }
+  function readDraft() {
+    try { var d = JSON.parse(window.localStorage.getItem(DRAFT_KEY) || 'null'); return d && d.cfg ? d : null; }
+    catch (e) { return null; }
+  }
+  function clearDraft() {
+    try { window.localStorage.removeItem(DRAFT_KEY); } catch (e) { /* sin almacenamiento */ }
+  }
+
+  function canAutoSave() { return !S.server.available || S.server.authenticated; }
+
+  function scheduleSave() {
+    window.clearTimeout(saveTimer);
+    saveTimer = null;
+    if (!canAutoSave()) return;
+    saveTimer = window.setTimeout(function () { saveTimer = null; save({ auto: true }); }, AUTOSAVE_MS);
+  }
+
+  /** Guarda de inmediato lo pendiente (al cerrar el panel o la pestaña). */
+  function flushSave(keepalive) {
+    if (!saveTimer) return;
+    window.clearTimeout(saveTimer);
+    saveTimer = null;
+    save({ auto: true, keepalive: keepalive });
+  }
+
   function setCfg(k, v) { S.cfg[k] = v; markDirty(); renderLook(); }
   function setColor(k, v) { if (!isHex(v)) return; S.cfg.colors[k] = v.toUpperCase(); markDirty(); renderLook(); }
   function setTurn(i, k, v) {
@@ -695,7 +757,8 @@
     if (opts.form) body = opts.form;
     if (opts.method === 'POST' && S.server.csrf) headers['X-CSRF-Token'] = S.server.csrf;
     return fetch(API + '?action=' + encodeURIComponent(action), {
-      method: opts.method || 'GET', headers: headers, body: body, credentials: 'same-origin', cache: 'no-store'
+      method: opts.method || 'GET', headers: headers, body: body, credentials: 'same-origin', cache: 'no-store',
+      keepalive: !!opts.keepalive
     }).then(function (r) {
       if (opts.raw && r.ok) return r.blob();
       return r.json().catch(function () { return { ok: false, message: 'Respuesta inválida del servidor.' }; }).then(function (data) {
@@ -740,7 +803,7 @@
       S.server.hasState = !!data.state;
       applyMeta(data);
       applyRemoteState(data.state);
-      return api('session').then(applySession).catch(function () {});
+      return api('session').then(applySession).catch(function () {}).then(restoreDraft);
     }).catch(function () {
       S.server.available = false;
       try {
@@ -753,6 +816,20 @@
       renderAll();
       if (needsWizard()) wizard.open({ start: 'check' });
     });
+  }
+
+  /**
+   * Si en esta pantalla quedaron cambios sin guardar sobre la misma versión del servidor, se recuperan.
+   * Si el servidor cambió desde entonces (otro guardado), el borrador se descarta para no pisarlo.
+   */
+  function restoreDraft() {
+    var d = readDraft();
+    if (!d) return;
+    if (!S.server.hasState || d.baseRev !== S.server.rev) { clearDraft(); return; }
+    applyRemoteState(d);
+    S.dirty = true;
+    S.changeSeq++;
+    if (S.server.authenticated) scheduleSave();
   }
 
   /* ---------------- asistente de instalación ---------------- */
@@ -780,37 +857,83 @@
     wizard.open({ start: start });
   }
 
-  function save() {
+  function save(opts) {
+    opts = opts || {};
     if (!S.server.available) {
       try {
         window.localStorage.setItem(LOCAL_KEY, JSON.stringify({ cfg: S.cfg, turns: S.turns }));
-        S.dirty = false; flashStatus('Guardado en este navegador.', 'ok');
+        S.dirty = false;
+        if (!opts.auto) flashStatus('Guardado en este navegador.', 'ok');
       } catch (e) {
         flashStatus('No se pudo guardar en el navegador (¿imágenes muy grandes?).', 'error');
       }
+      if (S.menuOpen) renderSaveState();
       return;
     }
     if (!S.server.authenticated) {
+      if (opts.auto) return;
       selectTab('access', true);
       if (!$('login-form').hidden) $('f-pass').focus();
       return;
     }
+    if (S.saving) { S.saveQueued = true; return; }
+    var seq = S.changeSeq;
     var payload = { cfg: S.cfg, turns: S.turns, rev: S.server.rev };
-    if (S.pendingKey !== null) payload.secrets = { elKey: S.pendingKey };
-    el.saveBtn.disabled = true;
-    flashStatus('Guardando…', 'warn');
-    api('save', { method: 'POST', json: payload }).then(function (data) {
+    var sentKey = S.pendingKey;
+    if (sentKey !== null) payload.secrets = { elKey: sentKey };
+    S.saving = true;
+    if (S.menuOpen) renderSaveState();
+    if (!opts.auto) el.saveBtn.disabled = true;
+    api('save', { method: 'POST', json: payload, keepalive: opts.keepalive }).then(function (data) {
+      applyMeta(data);
+      if (S.pendingKey === sentKey) { S.pendingKey = null; $('f-key').value = ''; }
+      S.savedAt = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+      if (seq === S.changeSeq) {
+        // Nada cambió mientras se guardaba: se adopta la versión normalizada del servidor.
+        applyRemoteState(data.state);
+        S.dirty = false;
+        S.server.hasState = true;
+        clearDraft();
+        renderLook(); renderSpeaker();
+      } else {
+        // Hubo cambios durante el guardado: se conservan y se guardan en la siguiente vuelta.
+        writeDraft();
+        S.saveQueued = true;
+      }
+      if (S.menuOpen) { renderSoundPanel(); renderSaveState(); }
+      if (!opts.auto) announce('Cambios guardados.');
+    }).catch(function (e) {
+      if (e.status === 401 || (e.data && e.data.error === 'csrf')) {
+        S.server.authenticated = false; S.server.csrf = null;
+        S.saveError = '';
+        if (S.menuOpen) renderPanel();
+        flashStatus('La sesión expiró. Los cambios se conservan en este navegador: inicie sesión para guardarlos.', 'error');
+      } else {
+        S.saveError = 'No se guardó: ' + e.message;
+        if (S.menuOpen) renderSaveState();
+      }
+      S.saveQueued = false;
+      announce('Error al guardar: ' + e.message, true);
+    }).then(function () {
+      S.saving = false;
+      el.saveBtn.disabled = false;
+      if (S.saveQueued) { S.saveQueued = false; save({ auto: true }); }
+      else if (S.menuOpen) renderSaveState();
+    });
+  }
+
+  /** Descarta los cambios locales sin guardar y vuelve a la configuración del servidor. */
+  function discardLocal() {
+    clearDraft();
+    window.clearTimeout(saveTimer); saveTimer = null;
+    return api('state').then(function (data) {
       applyMeta(data);
       applyRemoteState(data.state);
-      S.dirty = false; S.pendingKey = null; $('f-key').value = '';
+      S.dirty = false;
+      loadTurn(Math.min(S.idx, Math.max(0, S.turns.length - 1)), false);
       renderAll();
-      flashStatus('Cambios guardados en el servidor.', 'ok');
-      announce('Cambios guardados.');
-    }).catch(function (e) {
-      if (e.status === 401) { S.server.authenticated = false; S.server.csrf = null; renderPanel(); }
-      flashStatus(e.message, 'error');
-      announce('Error al guardar: ' + e.message, true);
-    }).then(function () { el.saveBtn.disabled = false; });
+      announce('Se descartaron los cambios locales.');
+    }).catch(function (e) { flashStatus(e.message, 'error'); });
   }
 
   function uploadImage(input) {
@@ -835,7 +958,7 @@
     api('upload', { method: 'POST', form: form }).then(function (data) {
       setCfg(key, data.ref);
       renderPanel();
-      flashStatus('Imagen subida. Recuerde guardar los cambios.', 'ok');
+      announce('Imagen subida.');
     }).catch(function (e) { flashStatus(e.message, 'error'); })
       .then(function () { input.value = ''; });
   }
@@ -933,8 +1056,9 @@
     $('reset-colors').addEventListener('click', function () { S.cfg.colors = Object.assign({}, DEFAULT_COLORS); markDirty(); renderLook(); renderPanel(); announce('Colores institucionales restablecidos.'); });
 
     // Campo vacío = no cambiar la clave guardada; para borrarla se usa el botón dedicado.
-    $('f-key').addEventListener('input', function () { S.pendingKey = this.value.trim() || null; markDirty(); });
-    $('clear-key').addEventListener('click', function () { S.pendingKey = ''; markDirty(); flashStatus('La clave se borrará al guardar.', 'warn'); });
+    // La clave se envía al salir del campo (no en cada tecla, para no guardar claves a medio escribir).
+    $('f-key').addEventListener('change', function () { var v = this.value.trim(); if (v) { S.pendingKey = v; markDirty(); } });
+    $('clear-key').addEventListener('click', function () { S.pendingKey = ''; markDirty(); announce('La API key se borrará del servidor.'); });
     $('test-end').addEventListener('click', function () { ensureAudio(); if (S.cfg.sound) chimeEnd(); window.setTimeout(function () { speak(S.cfg.endPhrase); }, 1300); });
     $('test-start').addEventListener('click', function () {
       ensureAudio();
@@ -950,7 +1074,8 @@
       if (!pass.value) { accessMsg.textContent = 'Escriba la contraseña.'; pass.focus(); return; }
       api('login', { method: 'POST', json: { password: pass.value } }).then(function (data) {
         pass.value = ''; applySession(data); renderPanel();
-        announce('Sesión iniciada.');
+        announce(S.dirty ? 'Sesión iniciada. Guardando los cambios pendientes de esta pantalla.' : 'Sesión iniciada.');
+        if (S.dirty) scheduleSave();
         el.saveBtn.focus();
       }).catch(function (err) { accessMsg.textContent = err.message; pass.focus(); });
     });
@@ -964,10 +1089,13 @@
       });
     });
 
-    el.saveBtn.addEventListener('click', save);
-    window.addEventListener('beforeunload', function (e) {
-      if (S.dirty) { e.preventDefault(); e.returnValue = ''; }
+    el.saveBtn.addEventListener('click', function () { window.clearTimeout(saveTimer); saveTimer = null; save({ auto: false }); });
+    $('discard-btn').addEventListener('click', function () {
+      if (window.confirm('¿Descartar los cambios de esta pantalla y volver a la configuración guardada en el servidor?')) discardLocal();
     });
+    // Al cerrar o recargar: se envía lo pendiente; lo que no alcance a llegar queda en el borrador local.
+    window.addEventListener('pagehide', function () { flushSave(true); });
+    window.addEventListener('beforeunload', function () { flushSave(true); });
   }
 
   /* ---------------- arranque ---------------- */

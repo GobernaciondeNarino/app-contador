@@ -10,9 +10,9 @@
 <title>Contador de exposiciones · Gobernación de Nariño</title>
 <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
 <link rel="preload" href="assets/fonts/hind-madurai-700-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/css/app.css?v=1.1.1">
-<script src="assets/js/wizard.js?v=1.1.1" defer></script>
-<script src="assets/js/app.js?v=1.1.1" defer></script>
+<link rel="stylesheet" href="assets/css/app.css?v=1.2.0">
+<script src="assets/js/wizard.js?v=1.2.0" defer></script>
+<script src="assets/js/app.js?v=1.2.0" defer></script>
 </head>
 <body>
 
@@ -264,7 +264,10 @@
 
     <div class="panel-foot">
       <p id="save-status" class="save-status" role="status"></p>
-      <button type="button" id="save-btn" class="btn-green">Guardar cambios</button>
+      <div class="foot-actions">
+        <button type="button" id="discard-btn" class="btn-plain" hidden>Descartar</button>
+        <button type="button" id="save-btn" class="btn-green">Guardar ahora</button>
+      </div>
     </div>
   </section>
 </div>

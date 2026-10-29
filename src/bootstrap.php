@@ -4,7 +4,7 @@
  */
 declare(strict_types=1);
 
-const APP_VERSION = '1.1.1';
+const APP_VERSION = '1.2.0';
 const SETUP_TOKEN_MIN = 16;
 const ASSET_ID_PATTERN = '/^[a-f0-9]{32}\.(png|jpg|webp|gif|svg)$/';
 const ASSET_REF_PATTERN = '/^api\.php\?action=asset&id=([a-f0-9]{32}\.(?:png|jpg|webp|gif|svg))$/';

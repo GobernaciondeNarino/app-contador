@@ -30,15 +30,15 @@
     "semantic_hash": ""
   },
   "public/assets/js/app.js": {
-    "mtime": 1793221056.830452,
-    "seen": 1793221435.777763,
-    "ast_hash": "c796daf1a0a3dad3512c919984a2da63",
+    "mtime": 1793282724.8845077,
+    "seen": 1793282810.2785602,
+    "ast_hash": "56a8df1e7c99b21f91c1fefae13b1151",
     "semantic_hash": ""
   },
   "src/bootstrap.php": {
-    "mtime": 1793222738.3253999,
-    "seen": 1793222830.7440999,
-    "ast_hash": "420dabef59a7b7bb53df0baee5f07134",
+    "mtime": 1793282749.5934758,
+    "seen": 1793282810.278566,
+    "ast_hash": "0c6a9442b7dd87114034e157dc7c0b10",
     "semantic_hash": ""
   },
   "src/validate.php": {
@@ -48,9 +48,9 @@
     "semantic_hash": ""
   },
   "tests/a11y.test.mjs": {
-    "mtime": 1793222766.3816729,
-    "seen": 1793222830.7441046,
-    "ast_hash": "8af538d6d80f5d447ba6d4f42d67f8bf",
+    "mtime": 1793282621.4663,
+    "seen": 1793282810.2785695,
+    "ast_hash": "69942cb42ca5f75bc52d508e2d92dbd8",
     "semantic_hash": ""
   },
   "tests/helpers.mjs": {
@@ -84,9 +84,9 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1793221363.6566663,
-    "seen": 1793221435.777791,
-    "ast_hash": "1506a2e9fdf1c5fcccfe904bf7cac3df",
+    "mtime": 1793282749.594291,
+    "seen": 1793282810.2785838,
+    "ast_hash": "fc998215ff967488152cc6d1b7882b50",
     "semantic_hash": ""
   },
   "design/Main.dc.html": {
@@ -102,15 +102,15 @@
     "semantic_hash": ""
   },
   "docs/DESPLIEGUE-PLESK.md": {
-    "mtime": 1793222828.216711,
-    "seen": 1793222830.744128,
-    "ast_hash": "cbd9a0f51aff6576b8be7dba8089d718",
+    "mtime": 1793282749.5948327,
+    "seen": 1793282810.278588,
+    "ast_hash": "dec2262265b2673ee0fe89ac8bf95012",
     "semantic_hash": ""
   },
   "docs/INFORME-SEGURIDAD-ACCESIBILIDAD.md": {
-    "mtime": 1793222828.2177,
-    "seen": 1793222830.7441294,
-    "ast_hash": "728bc42c4a62d136cf3125bb6a8f2786",
+    "mtime": 1793282749.5952814,
+    "seen": 1793282810.2785904,
+    "ast_hash": "656f540b88088a30cb3d46ad4815867b",
     "semantic_hash": ""
   },
   "public/assets/fonts/OFL-HindMadurai.txt": {
@@ -126,9 +126,9 @@
     "semantic_hash": ""
   },
   "public/index.html": {
-    "mtime": 1793222828.2312539,
-    "seen": 1793222830.7441347,
-    "ast_hash": "ec1e1b2203114e7d37d845e7c95ca452",
+    "mtime": 1793282749.6025026,
+    "seen": 1793282810.2785947,
+    "ast_hash": "976516f410bafe7741a1529d35f7a543",
     "semantic_hash": ""
   },
   "storage/README.md": {
@@ -138,9 +138,9 @@
     "semantic_hash": ""
   },
   "tests/reports/axe-resultados.md": {
-    "mtime": 1793222807.0877964,
-    "seen": 1793222830.7441387,
-    "ast_hash": "744ffd345ba2e00a097f0dcf2b8d87cb",
+    "mtime": 1793282791.7790704,
+    "seen": 1793282810.2785976,
+    "ast_hash": "9718c433a9d55e3afd867fbff433adb0",
     "semantic_hash": ""
   },
   "public/assets/img/favicon.svg": {

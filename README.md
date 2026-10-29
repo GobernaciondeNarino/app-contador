@@ -4,6 +4,7 @@ Contador de tiempo para ponencias y eventos, listo para producción en **Plesk**
 
 - **Frontend** estático sin dependencias (HTML + CSS + JavaScript), con la identidad visual de la Gobernación de Nariño: Hind Madurai, Nunito Sans y los colores `#10A13B`, `#FFD500`, `#003366` y `#4A4A4A`.
 - **Asistente de instalación** al iniciar por primera vez, en 7 pasos.
+- **Guardado automático**: con sesión de administrador, cada cambio del menú (colores, imagen de fondo, logo, turnos) se guarda solo en el servidor; sin sesión se conserva en el navegador hasta iniciar sesión.
 - **Backend** PHP de un solo archivo (`public/api.php`) que guarda la configuración en **JSON** (sin base de datos).
 - Accesibilidad **WCAG 2.1 / 2.2 AA** (Resolución 1519 de 2020 de MinTIC) y controles de seguridad OWASP verificados con pruebas automáticas.
 
@@ -54,7 +55,7 @@ Ver **[docs/DESPLIEGUE-PLESK.md](docs/DESPLIEGUE-PLESK.md)**: requisitos, raíz 
 
 ```bash
 npm install     # axe-core
-npm test        # sintaxis + 70 pruebas (seguridad, estáticas, accesibilidad)
+npm test        # sintaxis + 78 pruebas (seguridad, estáticas, accesibilidad)
 npm run test:security
 npm run test:a11y
 ```

@@ -165,7 +165,9 @@ done
 
 1. Abra el sitio en el equipo conectado al proyector, en pantalla completa (F11).
 2. Menú ☰ → **Acceso** → inicie sesión (necesario para guardar y para la voz de ElevenLabs).
-3. Para un evento nuevo use **Abrir asistente de configuración**; para ajustes puntuales (colores, imagen de fondo, orden) use las pestañas del menú → **Guardar cambios**.
+3. Para un evento nuevo use **Abrir asistente de configuración**; para ajustes puntuales (colores, imagen de fondo, logo, orden de turnos) use las pestañas del menú.
+4. **No hace falta pulsar Guardar**: con sesión iniciada cada cambio se guarda solo en el servidor en un segundo, y también al cerrar el panel o la pestaña. El pie del panel indica «Guardado automáticamente en el servidor (hora)». El botón **Guardar ahora** fuerza el guardado inmediato.
+5. Sin sesión, los cambios se conservan **solo en ese navegador** (el pie del panel lo avisa) y se suben al servidor en cuanto se inicia sesión. **Descartar** vuelve a la configuración del servidor. Si mientras tanto otro administrador guardó una versión más nueva, prevalece la del servidor.
 4. Controles: **Iniciar/Pausar**, **Reiniciar** y el botón verde **→** para pasar al siguiente ponente (anuncia el nombre por voz).
 
 Sin sesión iniciada la pantalla funciona igual (muestra la última configuración guardada) y los cambios hechos en el menú solo afectan esa pantalla.
@@ -176,6 +178,7 @@ Sin sesión iniciada la pantalla funciona igual (muestra la última configuraci�
 |---|---|---|
 | Al guardar responde 401 y el asistente dice que la sesión no está activa, aunque se acaba de crear la contraseña | Versiones 1.0.0 a 1.1.0 publicadas con el `.htaccess` de la raíz (repositorio completo en un subdirectorio): la cookie de sesión quedaba con la ruta `…/public/` y el navegador no la enviaba | Actualice a 1.1.1 o superior (`src/bootstrap.php`, `public/assets/js/wizard.js`). La contraseña creada sigue siendo válida: recargue, inicie sesión en el paso 2 y guarde |
 | La consola muestra «Loading the script 'https://static.cloudflareinsights.com/…' violates the following Content Security Policy» | Cloudflare inyecta su script de analítica y la CSP lo bloquea | No afecta al contador. Desactive *Web Analytics → Automatic setup* en Cloudflare para ese dominio (recomendado por privacidad), o permita `https://static.cloudflareinsights.com` en `script-src` y `https://cloudflareinsights.com` en `connect-src` |
+| Al recargar se pierden la imagen de fondo o los colores | Versiones anteriores a 1.2.0 solo guardaban al pulsar **Guardar cambios**; sin sesión los cambios eran solo de esa pantalla | Actualice a 1.2.0 (guardado automático). Verifique en `api.php?action=state` que `bgImage` y `colors` tienen los valores nuevos y que `rev` aumentó |
 | El asistente dice que el token no coincide | Se copió un token distinto | Si `config.php` tiene un `setup_token` de 16+ caracteres, se usa ese; si no, el de `storage/setup-token.php`. `api.php?action=session` indica cuál en `tokenSource` (`config` o `file`) |
 | No aparece `storage/setup-token.php` | `storage/` sin permisos de escritura (el paso 1 lo marca en rojo) | Dé permisos 750 a `storage/` o use `php bin/set-password.php` |
 | El paso 1 marca "Datos protegidos de internet" en rojo | `storage/` se puede descargar por web | Apunte la raíz del documento a `public/` (§3) o revise que los `.htaccess`/`web.config` estén subidos; en nginx puro aplique las directivas de §7 |
